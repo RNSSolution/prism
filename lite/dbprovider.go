@@ -6,11 +6,11 @@ import (
 	"strconv"
 
 	amino "github.com/tendermint/go-amino"
-	cryptoAmino "github.com/tendermint/tendermint/crypto/encoding/amino"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	log "github.com/tendermint/tendermint/libs/log"
-	lerr "github.com/tendermint/tendermint/lite/errors"
-	"github.com/tendermint/tendermint/types"
+	cryptoAmino "github.com/ColorPlatform/prism/crypto/encoding/amino"
+	dbm "github.com/ColorPlatform/prism/libs/db"
+	log "github.com/ColorPlatform/prism/libs/log"
+	lerr "github.com/ColorPlatform/prism/lite/errors"
+	"github.com/ColorPlatform/prism/types"
 )
 
 var _ PersistentProvider = (*DBProvider)(nil)

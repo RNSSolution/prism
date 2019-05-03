@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	amino "github.com/tendermint/go-amino"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/types"
-	tmtime "github.com/tendermint/tendermint/types/time"
+	"github.com/ColorPlatform/prism/crypto/ed25519"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/types"
+	tmtime "github.com/ColorPlatform/prism/types/time"
 )
 
 func BenchmarkRoundStateDeepCopy(b *testing.B) {

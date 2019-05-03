@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/ColorPlatform/prism/libs/log"
 )
 
 func TestMaxOpenConnections(t *testing.T) {

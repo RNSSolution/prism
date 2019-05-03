@@ -12,13 +12,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/tendermint/tendermint/abci/example/kvstore"
-	cfg "github.com/tendermint/tendermint/config"
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/p2p/mock"
-	"github.com/tendermint/tendermint/proxy"
-	"github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/abci/example/kvstore"
+	cfg "github.com/ColorPlatform/prism/config"
+	"github.com/ColorPlatform/prism/libs/log"
+	"github.com/ColorPlatform/prism/p2p"
+	"github.com/ColorPlatform/prism/p2p/mock"
+	"github.com/ColorPlatform/prism/proxy"
+	"github.com/ColorPlatform/prism/types"
 )
 
 type peerState struct {

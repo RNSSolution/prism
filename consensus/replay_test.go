@@ -15,17 +15,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/tendermint/tendermint/abci/example/kvstore"
-	abci "github.com/tendermint/tendermint/abci/types"
-	cfg "github.com/tendermint/tendermint/config"
-	"github.com/tendermint/tendermint/crypto"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/privval"
-	"github.com/tendermint/tendermint/proxy"
-	sm "github.com/tendermint/tendermint/state"
-	"github.com/tendermint/tendermint/types"
-	"github.com/tendermint/tendermint/version"
+	"github.com/ColorPlatform/prism/abci/example/kvstore"
+	abci "github.com/ColorPlatform/prism/abci/types"
+	cfg "github.com/ColorPlatform/prism/config"
+	"github.com/ColorPlatform/prism/crypto"
+	dbm "github.com/ColorPlatform/prism/libs/db"
+	"github.com/ColorPlatform/prism/libs/log"
+	"github.com/ColorPlatform/prism/privval"
+	"github.com/ColorPlatform/prism/proxy"
+	sm "github.com/ColorPlatform/prism/state"
+	"github.com/ColorPlatform/prism/types"
+	"github.com/ColorPlatform/prism/version"
 )
 
 func TestMain(m *testing.M) {

@@ -1,12 +1,12 @@
 package lite
 
 import (
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
+	"github.com/ColorPlatform/prism/crypto"
+	"github.com/ColorPlatform/prism/crypto/ed25519"
+	"github.com/ColorPlatform/prism/crypto/secp256k1"
 
-	"github.com/tendermint/tendermint/types"
-	tmtime "github.com/tendermint/tendermint/types/time"
+	"github.com/ColorPlatform/prism/types"
+	tmtime "github.com/ColorPlatform/prism/types/time"
 )
 
 // privKeys is a helper type for testing.
@@ -63,7 +63,7 @@ func (pkz privKeys) ExtendSecp(n int) privKeys {
 func (pkz privKeys) ToValidators(init, inc int64) *types.ValidatorSet {
 	res := make([]*types.Validator, len(pkz))
 	for i, k := range pkz {
-		res[i] = types.NewValidator(k.PubKey(), init+int64(i)*inc)
+		res[i] = types.NewValidator(k.PubKey(), init+int64(i)*inc, types.InvalidLeague, types.InvalidNodeId)
 	}
 	return types.NewValidatorSet(res)
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
+	cmn "github.com/ColorPlatform/prism/libs/common"
 )
 
 // UNSTABLE
@@ -389,7 +389,7 @@ func (voteSet *VoteSet) IsCommit() bool {
 	return voteSet.maj23 != nil
 }
 
-func (voteSet *VoteSet) HasTwoThirdsAny() bool {
+func (voteSet *VoteSet) ThresholdPassed() bool {
 	if voteSet == nil {
 		return false
 	}

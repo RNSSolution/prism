@@ -8,19 +8,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tendermint/tendermint/libs/log"
+	"github.com/ColorPlatform/prism/libs/log"
 
-	abci "github.com/tendermint/tendermint/abci/types"
+	abci "github.com/ColorPlatform/prism/abci/types"
 
-	cfg "github.com/tendermint/tendermint/config"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	nm "github.com/tendermint/tendermint/node"
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/privval"
-	"github.com/tendermint/tendermint/proxy"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	core_grpc "github.com/tendermint/tendermint/rpc/grpc"
-	rpcclient "github.com/tendermint/tendermint/rpc/lib/client"
+	cfg "github.com/ColorPlatform/prism/config"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	nm "github.com/ColorPlatform/prism/node"
+	"github.com/ColorPlatform/prism/p2p"
+	"github.com/ColorPlatform/prism/privval"
+	"github.com/ColorPlatform/prism/proxy"
+	ctypes "github.com/ColorPlatform/prism/rpc/core/types"
+	core_grpc "github.com/ColorPlatform/prism/rpc/grpc"
+	rpcclient "github.com/ColorPlatform/prism/rpc/lib/client"
 )
 
 var globalConfig *cfg.Config

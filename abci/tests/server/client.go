@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	abcicli "github.com/tendermint/tendermint/abci/client"
-	"github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	abcicli "github.com/ColorPlatform/prism/abci/client"
+	"github.com/ColorPlatform/prism/abci/types"
+	cmn "github.com/ColorPlatform/prism/libs/common"
 )
 
 func InitChain(client abcicli.Client) error {

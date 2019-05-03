@@ -1,8 +1,8 @@
 package mock
 
 import (
-	"github.com/tendermint/tendermint/rpc/client"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
+	"github.com/ColorPlatform/prism/rpc/client"
+	ctypes "github.com/ColorPlatform/prism/rpc/core/types"
 )
 
 // StatusMock returns the result specified by the Call

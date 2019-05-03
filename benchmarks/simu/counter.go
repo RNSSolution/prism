@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
-	rpcclient "github.com/tendermint/tendermint/rpc/lib/client"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	rpcclient "github.com/ColorPlatform/prism/rpc/lib/client"
 )
 
 func main() {

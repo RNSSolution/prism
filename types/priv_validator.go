@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
+	"github.com/ColorPlatform/prism/crypto"
+	"github.com/ColorPlatform/prism/crypto/ed25519"
 )
 
 // PrivValidator defines the functionality of a local Tendermint validator
@@ -15,6 +15,7 @@ type PrivValidator interface {
 	GetPubKey() crypto.PubKey
 
 	SignVote(chainID string, vote *Vote) error
+	SignVoteList(chainID string, voteList *VoteList) error
 	SignProposal(chainID string, proposal *Proposal) error
 }
 
@@ -76,6 +77,21 @@ func (pv *MockPV) SignVote(chainID string, vote *Vote) error {
 		return err
 	}
 	vote.Signature = sig
+	return nil
+}
+
+// Implements PrivValidator.
+func (pv *MockPV) SignVoteList(chainID string, vl *VoteList) error {
+	useChainID := chainID
+	if pv.breakVoteSigning {
+		useChainID = "incorrect-chain-id"
+	}
+	signBytes := vl.SignBytes(useChainID)
+	sig, err := pv.privKey.Sign(signBytes)
+	if err != nil {
+		return err
+	}
+	vl.Signature = sig
 	return nil
 }
 

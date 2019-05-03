@@ -4,11 +4,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/tendermint/tendermint/libs/cli"
+	"github.com/ColorPlatform/prism/libs/cli"
 
-	cmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
-	cfg "github.com/tendermint/tendermint/config"
-	nm "github.com/tendermint/tendermint/node"
+	cmd "github.com/ColorPlatform/prism/cmd/prism/commands"
+	cfg "github.com/ColorPlatform/prism/config"
+	nm "github.com/ColorPlatform/prism/node"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 		cmd.ResetAllCmd,
 		cmd.ResetPrivValidatorCmd,
 		cmd.ShowValidatorCmd,
-		cmd.TestnetFilesCmd,
+		cmd.TestPrismFilesCmd,
 		cmd.ShowNodeIDCmd,
 		cmd.GenNodeKeyCmd,
 		cmd.VersionCmd)

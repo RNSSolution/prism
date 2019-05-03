@@ -6,10 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/crypto"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/libs/log"
+	"github.com/ColorPlatform/prism/types"
 )
 
 const (
@@ -84,6 +84,13 @@ func (ve *SignerValidatorEndpoint) SignVote(chainID string, vote *types.Vote) er
 	ve.mtx.Lock()
 	defer ve.mtx.Unlock()
 	return ve.signer.SignVote(chainID, vote)
+}
+
+// SignVoteList implements PrivValidator.
+func (ve *SignerValidatorEndpoint) SignVoteList(chainID string, vl *types.VoteList) error {
+	ve.mtx.Lock()
+	defer ve.mtx.Unlock()
+	return ve.signer.SignVoteList(chainID, vl)
 }
 
 // SignProposal implements PrivValidator.

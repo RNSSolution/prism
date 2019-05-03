@@ -17,12 +17,12 @@ want to directly call a tendermint node in process, you can use the
 import (
 	"reflect"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/rpc/client"
-	"github.com/tendermint/tendermint/rpc/core"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	rpctypes "github.com/tendermint/tendermint/rpc/lib/types"
-	"github.com/tendermint/tendermint/types"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/rpc/client"
+	"github.com/ColorPlatform/prism/rpc/core"
+	ctypes "github.com/ColorPlatform/prism/rpc/core/types"
+	rpctypes "github.com/ColorPlatform/prism/rpc/lib/types"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // Client wraps arbitrary implementations of the various interfaces.

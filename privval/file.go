@@ -7,11 +7,11 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/types"
-	tmtime "github.com/tendermint/tendermint/types/time"
+	"github.com/ColorPlatform/prism/crypto"
+	"github.com/ColorPlatform/prism/crypto/ed25519"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/types"
+	tmtime "github.com/ColorPlatform/prism/types/time"
 )
 
 // TODO: type ?
@@ -242,6 +242,15 @@ func (pv *FilePV) SignVote(chainID string, vote *types.Vote) error {
 	return nil
 }
 
+// SignVoteList signs a canonical representation of the vote list, along with the
+// chainID. Implements PrivValidator.
+func (pv *FilePV) SignVoteList(chainID string, vl *types.VoteList) error {
+	if err := pv.signVoteList(chainID, vl); err != nil {
+		return fmt.Errorf("error signing vote: %v", err)
+	}
+	return nil
+}
+
 // SignProposal signs a canonical representation of the proposal, along with
 // the chainID. Implements PrivValidator.
 func (pv *FilePV) SignProposal(chainID string, proposal *types.Proposal) error {
@@ -316,6 +325,12 @@ func (pv *FilePV) signVote(chainID string, vote *types.Vote) error {
 	pv.saveSigned(height, round, step, signBytes, sig)
 	vote.Signature = sig
 	return nil
+}
+
+// TODO: implement signVoteList 
+func (pv *FilePV) signVoteList(chainID string, vl *types.VoteList) error {
+	err := fmt.Errorf("Not implemened")
+	return err
 }
 
 // signProposal checks if the proposal is good to sign and sets the proposal signature.

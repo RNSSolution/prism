@@ -11,18 +11,18 @@ import (
 
 	"github.com/spf13/cobra"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/libs/log"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/libs/log"
 
-	abcicli "github.com/tendermint/tendermint/abci/client"
-	"github.com/tendermint/tendermint/abci/example/code"
-	"github.com/tendermint/tendermint/abci/example/counter"
-	"github.com/tendermint/tendermint/abci/example/kvstore"
-	"github.com/tendermint/tendermint/abci/server"
-	servertest "github.com/tendermint/tendermint/abci/tests/server"
-	"github.com/tendermint/tendermint/abci/types"
-	"github.com/tendermint/tendermint/abci/version"
-	"github.com/tendermint/tendermint/crypto/merkle"
+	abcicli "github.com/ColorPlatform/prism/abci/client"
+	"github.com/ColorPlatform/prism/abci/example/code"
+	"github.com/ColorPlatform/prism/abci/example/counter"
+	"github.com/ColorPlatform/prism/abci/example/kvstore"
+	"github.com/ColorPlatform/prism/abci/server"
+	servertest "github.com/ColorPlatform/prism/abci/tests/server"
+	"github.com/ColorPlatform/prism/abci/types"
+	"github.com/ColorPlatform/prism/abci/version"
+	"github.com/ColorPlatform/prism/crypto/merkle"
 )
 
 // client is a global variable so it can be reused by the console

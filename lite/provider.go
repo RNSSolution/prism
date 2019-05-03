@@ -1,8 +1,8 @@
 package lite
 
 import (
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/libs/log"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // Provider provides information for the lite client to sync validators.

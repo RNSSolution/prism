@@ -17,12 +17,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	amino "github.com/tendermint/go-amino"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/libs/log"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/libs/log"
 
-	client "github.com/tendermint/tendermint/rpc/lib/client"
-	server "github.com/tendermint/tendermint/rpc/lib/server"
-	types "github.com/tendermint/tendermint/rpc/lib/types"
+	client "github.com/ColorPlatform/prism/rpc/lib/client"
+	server "github.com/ColorPlatform/prism/rpc/lib/server"
+	types "github.com/ColorPlatform/prism/rpc/lib/types"
 )
 
 // Client and Server should work over tcp or unix sockets

@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/tendermint/tendermint/crypto/merkle"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/ColorPlatform/prism/crypto/merkle"
+	cmn "github.com/ColorPlatform/prism/libs/common"
 )
 
 // MaxTotalVotingPower - the maximum allowed total voting power.
@@ -42,6 +42,7 @@ type ValidatorSet struct {
 	// NOTE: persisted via reflect, must be exported.
 	Validators []*Validator `json:"validators"`
 	Proposer   *Validator   `json:"proposer"`
+	Leaders    []*Validator `json:"leaders"`
 
 	// cached (unexported)
 	totalVotingPower int64
@@ -95,12 +96,21 @@ func (vals *ValidatorSet) IncrementProposerPriority(times int) {
 	vals.shiftByAvgProposerPriority()
 
 	var proposer *Validator
+	var leaders []*Validator
 	// Call IncrementProposerPriority(1) times times.
 	for i := 0; i < times; i++ {
 		proposer = vals.incrementProposerPriority()
 	}
 
 	vals.Proposer = proposer
+
+	leaders = vals.computeLeagueLeaders()
+	if len(leaders) > 0 && proposer.League < 0 {
+		panic("Proposer is not a league member")
+	}
+	leaders[proposer.League] = proposer
+	fmt.Printf("DEBUG: league leaders: %v\n", leaders)
+	vals.Leaders = leaders
 }
 
 func (vals *ValidatorSet) RescalePriorities(diffMax int64) {
@@ -126,7 +136,7 @@ func (vals *ValidatorSet) RescalePriorities(diffMax int64) {
 	}
 }
 
-func (vals *ValidatorSet) incrementProposerPriority() *Validator {
+func (vals *ValidatorSet) incrementProposerPriority() (*Validator) {
 	for _, val := range vals.Validators {
 		// Check for overflow for sum.
 		newPrio := safeAddClip(val.ProposerPriority, val.VotingPower)
@@ -179,7 +189,39 @@ func computeMaxMinPriorityDiff(vals *ValidatorSet) int64 {
 	}
 }
 
-func (vals *ValidatorSet) getValWithMostPriority() *Validator {
+func (vals *ValidatorSet) getNumberOfLeagues() int {
+	var res int = -1
+	for _, val := range vals.Validators {
+		if val.League > res {
+			res = val.League
+		}
+	}
+	return res+1
+}
+
+func (vals *ValidatorSet) computeLeagueLeaders() ([]*Validator) {
+	leagues := vals.getNumberOfLeagues()
+	leaders := make([]*Validator, leagues)
+	if leagues > 0 {
+		for _, val := range vals.Validators {
+			if val.League > -1 {
+				leaders[val.League] = leaders[val.League].CompareProposerPriority(val)
+			}
+		}
+	}
+	return leaders
+}
+
+func (vals *ValidatorSet) IsLeagueLeader(val PrivValidator) (bool) {
+	for _, v := range vals.Leaders {
+		if (val).GetPubKey() == v.PubKey {
+			return true
+		}
+	}
+	return false
+}
+
+func (vals *ValidatorSet) getValWithMostPriority() (*Validator) {
 	var res *Validator
 	for _, val := range vals.Validators {
 		res = res.CompareProposerPriority(val)

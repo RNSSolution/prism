@@ -14,17 +14,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	abcicli "github.com/tendermint/tendermint/abci/client"
-	"github.com/tendermint/tendermint/abci/example/kvstore"
-	abci "github.com/tendermint/tendermint/abci/types"
-	bc "github.com/tendermint/tendermint/blockchain"
-	cfg "github.com/tendermint/tendermint/config"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	mempl "github.com/tendermint/tendermint/mempool"
-	"github.com/tendermint/tendermint/p2p"
-	sm "github.com/tendermint/tendermint/state"
-	"github.com/tendermint/tendermint/types"
+	abcicli "github.com/ColorPlatform/prism/abci/client"
+	"github.com/ColorPlatform/prism/abci/example/kvstore"
+	abci "github.com/ColorPlatform/prism/abci/types"
+	bc "github.com/ColorPlatform/prism/blockchain"
+	cfg "github.com/ColorPlatform/prism/config"
+	dbm "github.com/ColorPlatform/prism/libs/db"
+	"github.com/ColorPlatform/prism/libs/log"
+	mempl "github.com/ColorPlatform/prism/mempool"
+	"github.com/ColorPlatform/prism/p2p"
+	sm "github.com/ColorPlatform/prism/state"
+	"github.com/ColorPlatform/prism/types"
 )
 
 //----------------------------------------------

@@ -7,10 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	rpctypes "github.com/tendermint/tendermint/rpc/lib/types"
-	"github.com/tendermint/tendermint/types"
+	abci "github.com/ColorPlatform/prism/abci/types"
+	ctypes "github.com/ColorPlatform/prism/rpc/core/types"
+	rpctypes "github.com/ColorPlatform/prism/rpc/lib/types"
+	"github.com/ColorPlatform/prism/types"
 )
 
 //-----------------------------------------------------------------------------

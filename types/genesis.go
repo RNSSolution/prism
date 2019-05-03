@@ -7,9 +7,9 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	tmtime "github.com/tendermint/tendermint/types/time"
+	"github.com/ColorPlatform/prism/crypto"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	tmtime "github.com/ColorPlatform/prism/types/time"
 )
 
 const (
@@ -25,6 +25,8 @@ const (
 
 // GenesisValidator is an initial validator.
 type GenesisValidator struct {
+	League  int           `json:"league"`
+	NodeId  int           `json:"node_id"`
 	Address Address       `json:"address"`
 	PubKey  crypto.PubKey `json:"pub_key"`
 	Power   int64         `json:"power"`
@@ -54,7 +56,7 @@ func (genDoc *GenesisDoc) SaveAs(file string) error {
 func (genDoc *GenesisDoc) ValidatorHash() []byte {
 	vals := make([]*Validator, len(genDoc.Validators))
 	for i, v := range genDoc.Validators {
-		vals[i] = NewValidator(v.PubKey, v.Power)
+		vals[i] = NewValidator(v.PubKey, v.Power, v.League, v.NodeId)
 	}
 	vset := NewValidatorSet(vals)
 	return vset.Hash()

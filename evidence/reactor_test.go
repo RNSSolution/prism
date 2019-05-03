@@ -9,12 +9,12 @@ import (
 	"github.com/go-kit/kit/log/term"
 	"github.com/stretchr/testify/assert"
 
-	cfg "github.com/tendermint/tendermint/config"
-	"github.com/tendermint/tendermint/crypto/secp256k1"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/types"
+	cfg "github.com/ColorPlatform/prism/config"
+	"github.com/ColorPlatform/prism/crypto/secp256k1"
+	dbm "github.com/ColorPlatform/prism/libs/db"
+	"github.com/ColorPlatform/prism/libs/log"
+	"github.com/ColorPlatform/prism/p2p"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // evidenceLogger is a TestingLogger which uses a different

@@ -17,33 +17,45 @@ import (
 	"github.com/rs/cors"
 
 	amino "github.com/tendermint/go-amino"
-	abci "github.com/tendermint/tendermint/abci/types"
-	bc "github.com/tendermint/tendermint/blockchain"
-	cfg "github.com/tendermint/tendermint/config"
-	cs "github.com/tendermint/tendermint/consensus"
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/evidence"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	tmpubsub "github.com/tendermint/tendermint/libs/pubsub"
-	mempl "github.com/tendermint/tendermint/mempool"
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/p2p/pex"
-	"github.com/tendermint/tendermint/privval"
-	"github.com/tendermint/tendermint/proxy"
-	rpccore "github.com/tendermint/tendermint/rpc/core"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	grpccore "github.com/tendermint/tendermint/rpc/grpc"
-	rpcserver "github.com/tendermint/tendermint/rpc/lib/server"
-	sm "github.com/tendermint/tendermint/state"
-	"github.com/tendermint/tendermint/state/txindex"
-	"github.com/tendermint/tendermint/state/txindex/kv"
-	"github.com/tendermint/tendermint/state/txindex/null"
-	"github.com/tendermint/tendermint/types"
-	tmtime "github.com/tendermint/tendermint/types/time"
-	"github.com/tendermint/tendermint/version"
+	abci "github.com/ColorPlatform/prism/abci/types"
+	bc "github.com/ColorPlatform/prism/blockchain"
+	cfg "github.com/ColorPlatform/prism/config"
+	cs "github.com/ColorPlatform/prism/consensus"
+	"github.com/ColorPlatform/prism/crypto/ed25519"
+	"github.com/ColorPlatform/prism/evidence"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	dbm "github.com/ColorPlatform/prism/libs/db"
+	"github.com/ColorPlatform/prism/libs/log"
+	tmpubsub "github.com/ColorPlatform/prism/libs/pubsub"
+	mempl "github.com/ColorPlatform/prism/mempool"
+	"github.com/ColorPlatform/prism/p2p"
+	"github.com/ColorPlatform/prism/p2p/pex"
+	"github.com/ColorPlatform/prism/privval"
+	"github.com/ColorPlatform/prism/proxy"
+	rpccore "github.com/ColorPlatform/prism/rpc/core"
+	ctypes "github.com/ColorPlatform/prism/rpc/core/types"
+	grpccore "github.com/ColorPlatform/prism/rpc/grpc"
+	rpcserver "github.com/ColorPlatform/prism/rpc/lib/server"
+	sm "github.com/ColorPlatform/prism/state"
+	"github.com/ColorPlatform/prism/state/txindex"
+	"github.com/ColorPlatform/prism/state/txindex/kv"
+	"github.com/ColorPlatform/prism/state/txindex/null"
+	"github.com/ColorPlatform/prism/types"
+	tmtime "github.com/ColorPlatform/prism/types/time"
+	"github.com/ColorPlatform/prism/version"
 )
+
+// GLOBAL VARIABLE - this node
+
+var self *Node
+
+func Self() *Node {
+	return self
+}
+
+func SetSelf(node *Node) {
+	self = node
+}
 
 //------------------------------------------------------------------------------
 
@@ -61,6 +73,19 @@ type DBProvider func(*DBContext) (dbm.DB, error)
 func DefaultDBProvider(ctx *DBContext) (dbm.DB, error) {
 	dbType := dbm.DBBackendType(ctx.Config.DBBackend)
 	return dbm.NewDB(ctx.ID, dbType, ctx.Config.DBDir()), nil
+}
+
+// LeaguesDocProvider returns a LeaguesDoc.
+// It allows the LeaguesDoc to be pulled from sources other than the
+// filesystem, for instance from a distributed key-value store cluster.
+type LeaguesDocProvider func() (*types.LeaguesDoc, error)
+
+// DefaultLeaguesDocProviderFunc returns a LeaguesDocProvider that loads
+// the LeaguesDoc from the config.LeaguesFile() on the filesystem.
+func DefaultLeaguesDocProviderFunc(config *cfg.Config) LeaguesDocProvider {
+	return func() (*types.LeaguesDoc, error) {
+		return types.LeaguesDocFromFile(config.LeaguesFile())
+	}
 }
 
 // GenesisDocProvider returns a GenesisDoc.
@@ -110,6 +135,7 @@ func DefaultNewNode(config *cfg.Config, logger log.Logger) (*Node, error) {
 		privval.LoadOrGenFilePV(newPrivValKey, newPrivValState),
 		nodeKey,
 		proxy.DefaultClientCreator(config.ProxyApp, config.ABCI, config.DBDir()),
+		DefaultLeaguesDocProviderFunc(config),
 		DefaultGenesisDocProviderFunc(config),
 		DefaultDBProvider,
 		DefaultMetricsProvider(config.Instrumentation),
@@ -143,6 +169,7 @@ type Node struct {
 
 	// config
 	config        *cfg.Config
+	leagues       *types.LeaguesDoc   // initial topology
 	genesisDoc    *types.GenesisDoc   // initial validator set
 	privValidator types.PrivValidator // local node's validator key
 
@@ -175,6 +202,7 @@ func NewNode(config *cfg.Config,
 	privValidator types.PrivValidator,
 	nodeKey *p2p.NodeKey,
 	clientCreator proxy.ClientCreator,
+	leaguesDocProvider LeaguesDocProvider,
 	genesisDocProvider GenesisDocProvider,
 	dbProvider DBProvider,
 	metricsProvider MetricsProvider,
@@ -189,6 +217,12 @@ func NewNode(config *cfg.Config,
 
 	// Get State
 	stateDB, err := dbProvider(&DBContext{"state", config})
+	if err != nil {
+		return nil, err
+	}
+
+	// Get leagues topology file
+	leagues, err := leaguesDocProvider()
 	if err != nil {
 		return nil, err
 	}
@@ -471,6 +505,7 @@ func NewNode(config *cfg.Config,
 	sw.AddReactor("EVIDENCE", evidenceReactor)
 	sw.SetNodeInfo(nodeInfo)
 	sw.SetNodeKey(nodeKey)
+	sw.SetLeagues(leagues.Peers)
 
 	p2pLogger.Info("P2P Node ID", "ID", nodeKey.ID(), "file", config.NodeKeyFile())
 
@@ -502,7 +537,7 @@ func NewNode(config *cfg.Config,
 				// blocks assuming 10s blocks ~ 28 hours.
 				// TODO (melekes): make it dynamic based on the actual block latencies
 				// from the live network.
-				// https://github.com/tendermint/tendermint/issues/3523
+				// https://github.com/ColorPlatform/prism/issues/3523
 				SeedDisconnectWaitPeriod: 28 * time.Hour,
 			})
 		pexReactor.SetLogger(logger.With("module", "pex"))
@@ -521,6 +556,7 @@ func NewNode(config *cfg.Config,
 
 	node := &Node{
 		config:        config,
+		leagues:       leagues,
 		genesisDoc:    genDoc,
 		privValidator: privValidator,
 
@@ -835,6 +871,10 @@ func (n *Node) Config() *cfg.Config {
 	return n.config
 }
 
+// Leagues returns the league-based topology.
+func (n *Node) Leagues() *types.LeaguesDoc {
+	return n.leagues
+}
 //------------------------------------------------------------------------------
 
 func (n *Node) Listeners() []string {

@@ -3,16 +3,16 @@ package state
 import (
 	"fmt"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/types"
+	abci "github.com/ColorPlatform/prism/abci/types"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	dbm "github.com/ColorPlatform/prism/libs/db"
+	"github.com/ColorPlatform/prism/types"
 )
 
 const (
 	// persist validators every valSetCheckpointInterval blocks to avoid
 	// LoadValidators taking too much time.
-	// https://github.com/tendermint/tendermint/pull/3438
+	// https://github.com/ColorPlatform/prism/pull/3438
 	// 100000 results in ~ 100ms to get 100 validators (see BenchmarkLoadValidators)
 	valSetCheckpointInterval = 100000
 )
@@ -198,7 +198,7 @@ func LoadValidators(db dbm.DB, height int64) (*types.ValidatorSet, error) {
 			// release and just panic. Old chains might panic otherwise if they
 			// haven't saved validators at intermediate (%valSetCheckpointInterval)
 			// height yet.
-			// https://github.com/tendermint/tendermint/issues/3543
+			// https://github.com/ColorPlatform/prism/issues/3543
 			valInfo2 = loadValidatorsInfo(db, valInfo.LastHeightChanged)
 			lastStoredHeight = valInfo.LastHeightChanged
 			if valInfo2 == nil {

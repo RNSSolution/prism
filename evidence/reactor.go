@@ -7,10 +7,10 @@ import (
 
 	amino "github.com/tendermint/go-amino"
 
-	clist "github.com/tendermint/tendermint/libs/clist"
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/types"
+	clist "github.com/ColorPlatform/prism/libs/clist"
+	"github.com/ColorPlatform/prism/libs/log"
+	"github.com/ColorPlatform/prism/p2p"
+	"github.com/ColorPlatform/prism/types"
 )
 
 const (

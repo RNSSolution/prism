@@ -13,14 +13,14 @@ import (
 
 	"golang.org/x/net/context"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/libs/log"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/libs/log"
 
-	abcicli "github.com/tendermint/tendermint/abci/client"
-	"github.com/tendermint/tendermint/abci/example/code"
-	"github.com/tendermint/tendermint/abci/example/kvstore"
-	abciserver "github.com/tendermint/tendermint/abci/server"
-	"github.com/tendermint/tendermint/abci/types"
+	abcicli "github.com/ColorPlatform/prism/abci/client"
+	"github.com/ColorPlatform/prism/abci/example/code"
+	"github.com/ColorPlatform/prism/abci/example/kvstore"
+	abciserver "github.com/ColorPlatform/prism/abci/server"
+	"github.com/ColorPlatform/prism/abci/types"
 )
 
 func TestKVStore(t *testing.T) {

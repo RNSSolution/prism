@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/tendermint/tendermint/libs/log"
-	tmtypes "github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/libs/log"
+	tmtypes "github.com/ColorPlatform/prism/types"
 )
 
 // waiting more than this many seconds for a block means we're unhealthy

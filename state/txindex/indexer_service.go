@@ -3,9 +3,9 @@ package txindex
 import (
 	"context"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
+	cmn "github.com/ColorPlatform/prism/libs/common"
 
-	"github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/types"
 )
 
 const (

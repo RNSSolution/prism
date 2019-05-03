@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	amino "github.com/tendermint/go-amino"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	types "github.com/tendermint/tendermint/rpc/lib/types"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	types "github.com/ColorPlatform/prism/rpc/lib/types"
 )
 
 func TestParseJSONMap(t *testing.T) {

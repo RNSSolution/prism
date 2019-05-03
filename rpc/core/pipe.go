@@ -3,17 +3,17 @@ package core
 import (
 	"time"
 
-	cfg "github.com/tendermint/tendermint/config"
-	"github.com/tendermint/tendermint/consensus"
-	"github.com/tendermint/tendermint/crypto"
-	dbm "github.com/tendermint/tendermint/libs/db"
-	"github.com/tendermint/tendermint/libs/log"
-	mempl "github.com/tendermint/tendermint/mempool"
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/proxy"
-	sm "github.com/tendermint/tendermint/state"
-	"github.com/tendermint/tendermint/state/txindex"
-	"github.com/tendermint/tendermint/types"
+	cfg "github.com/ColorPlatform/prism/config"
+	"github.com/ColorPlatform/prism/consensus"
+	"github.com/ColorPlatform/prism/crypto"
+	dbm "github.com/ColorPlatform/prism/libs/db"
+	"github.com/ColorPlatform/prism/libs/log"
+	mempl "github.com/ColorPlatform/prism/mempool"
+	"github.com/ColorPlatform/prism/p2p"
+	"github.com/ColorPlatform/prism/proxy"
+	sm "github.com/ColorPlatform/prism/state"
+	"github.com/ColorPlatform/prism/state/txindex"
+	"github.com/ColorPlatform/prism/types"
 )
 
 const (
