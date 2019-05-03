@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/tendermint/tendermint/abci/example/kvstore"
-	"github.com/tendermint/tendermint/proxy"
-	"github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/abci/example/kvstore"
+	"github.com/ColorPlatform/prism/proxy"
+	"github.com/ColorPlatform/prism/types"
 )
 
 func TestCacheRemove(t *testing.T) {

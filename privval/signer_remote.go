@@ -7,9 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/crypto"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // SignerRemote implements PrivValidator.
@@ -92,6 +92,30 @@ func (sc *SignerRemote) SignVote(chainID string, vote *types.Vote) error {
 		return resp.Error
 	}
 	*vote = *resp.Vote
+
+	return nil
+}
+
+// SignVote implements PrivValidator.
+func (sc *SignerRemote) SignVoteList(chainID string, vl *types.VoteList) error {
+	err := writeMsg(sc.conn, &SignVoteListRequest{VoteList: vl})
+	if err != nil {
+		return err
+	}
+
+	res, err := readMsg(sc.conn)
+	if err != nil {
+		return err
+	}
+
+	resp, ok := res.(*SignedVoteListResponse)
+	if !ok {
+		return ErrUnexpectedResponse
+	}
+	if resp.Error != nil {
+		return resp.Error
+	}
+	*vl = *resp.VoteList
 
 	return nil
 }

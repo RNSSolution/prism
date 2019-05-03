@@ -2,8 +2,8 @@ package privval
 
 import (
 	amino "github.com/tendermint/go-amino"
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/crypto"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // RemoteSignerMsg is sent between SignerServiceEndpoint and the SignerServiceEndpoint client.
@@ -39,6 +39,17 @@ type SignVoteRequest struct {
 type SignedVoteResponse struct {
 	Vote  *types.Vote
 	Error *RemoteSignerError
+}
+
+// SignVoteListRequest is a PrivValidatorSocket message containing a vote list.
+type SignVoteListRequest struct {
+	VoteList *types.VoteList
+}
+
+// SignedVoteResponse is a PrivValidatorSocket message containing a signed vote along with a potenial error message.
+type SignedVoteListResponse struct {
+	VoteList *types.VoteList
+	Error    *RemoteSignerError
 }
 
 // SignProposalRequest is a PrivValidatorSocket message containing a Proposal.

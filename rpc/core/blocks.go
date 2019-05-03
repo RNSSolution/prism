@@ -3,11 +3,11 @@ package core
 import (
 	"fmt"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	rpctypes "github.com/tendermint/tendermint/rpc/lib/types"
-	sm "github.com/tendermint/tendermint/state"
-	"github.com/tendermint/tendermint/types"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	ctypes "github.com/ColorPlatform/prism/rpc/core/types"
+	rpctypes "github.com/ColorPlatform/prism/rpc/lib/types"
+	sm "github.com/ColorPlatform/prism/state"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // Get block headers for minHeight <= height <= maxHeight.

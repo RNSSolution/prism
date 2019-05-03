@@ -5,23 +5,27 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tendermint/tendermint/crypto"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/ColorPlatform/prism/crypto"
+	cmn "github.com/ColorPlatform/prism/libs/common"
 )
 
 // Volatile state for each Validator
 // NOTE: The ProposerPriority is not included in Validator.Hash();
 // make sure to update that method if changes are made here
 type Validator struct {
+	League      int           `json:"league"`
+	NodeId      int           `json:"node_id"`
 	Address     Address       `json:"address"`
 	PubKey      crypto.PubKey `json:"pub_key"`
 	VotingPower int64         `json:"voting_power"`
 
-	ProposerPriority int64 `json:"proposer_priority"`
+	ProposerPriority int64    `json:"proposer_priority"`
 }
 
-func NewValidator(pubKey crypto.PubKey, votingPower int64) *Validator {
+func NewValidator(pubKey crypto.PubKey, votingPower int64, league int, nodeId int) *Validator {
 	return &Validator{
+		League:           league,
+		NodeId:           nodeId,
 		Address:          pubKey.Address(),
 		PubKey:           pubKey,
 		VotingPower:      votingPower,
@@ -62,11 +66,14 @@ func (v *Validator) String() string {
 	if v == nil {
 		return "nil-Validator"
 	}
-	return fmt.Sprintf("Validator{%v %v VP:%v A:%v}",
+	return fmt.Sprintf("Validator{%v %v VP:%v A:%v L:(%v@%v)}",
 		v.Address,
 		v.PubKey,
 		v.VotingPower,
-		v.ProposerPriority)
+		v.ProposerPriority,
+		v.NodeId,
+		v.League,
+	)
 }
 
 // ValidatorListString returns a prettified validator list for logging purposes.
@@ -105,6 +112,7 @@ func RandValidator(randPower bool, minPower int64) (*Validator, PrivValidator) {
 		votePower += int64(cmn.RandUint32())
 	}
 	pubKey := privVal.GetPubKey()
-	val := NewValidator(pubKey, votePower)
+	// TODO: add new validator to the current league
+	val := NewValidator(pubKey, votePower, InvalidLeague, InvalidNodeId)
 	return val, privVal
 }

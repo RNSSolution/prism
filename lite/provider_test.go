@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	dbm "github.com/tendermint/tendermint/libs/db"
-	log "github.com/tendermint/tendermint/libs/log"
-	lerr "github.com/tendermint/tendermint/lite/errors"
-	"github.com/tendermint/tendermint/types"
+	dbm "github.com/ColorPlatform/prism/libs/db"
+	log "github.com/ColorPlatform/prism/libs/log"
+	lerr "github.com/ColorPlatform/prism/lite/errors"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // missingProvider doesn't store anything, always a miss.

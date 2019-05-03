@@ -11,14 +11,14 @@ import (
 
 	"github.com/pkg/errors"
 
-	abci "github.com/tendermint/tendermint/abci/types"
-	cfg "github.com/tendermint/tendermint/config"
-	auto "github.com/tendermint/tendermint/libs/autofile"
-	"github.com/tendermint/tendermint/libs/clist"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/proxy"
-	"github.com/tendermint/tendermint/types"
+	abci "github.com/ColorPlatform/prism/abci/types"
+	cfg "github.com/ColorPlatform/prism/config"
+	auto "github.com/ColorPlatform/prism/libs/autofile"
+	"github.com/ColorPlatform/prism/libs/clist"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/libs/log"
+	"github.com/ColorPlatform/prism/proxy"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // PreCheckFunc is an optional filter executed before CheckTx and rejects

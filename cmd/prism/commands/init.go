@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	cfg "github.com/tendermint/tendermint/config"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/p2p"
-	"github.com/tendermint/tendermint/privval"
-	"github.com/tendermint/tendermint/types"
-	tmtime "github.com/tendermint/tendermint/types/time"
+	cfg "github.com/ColorPlatform/prism/config"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/p2p"
+	"github.com/ColorPlatform/prism/privval"
+	"github.com/ColorPlatform/prism/types"
+	tmtime "github.com/ColorPlatform/prism/types/time"
 )
 
 // InitFilesCmd initialises a fresh Tendermint Core instance.
@@ -64,6 +64,8 @@ func initFilesWithConfig(config *cfg.Config) error {
 			Address: key.Address(),
 			PubKey:  key,
 			Power:   10,
+			League:  0,
+			NodeId:  0,
 		}}
 
 		if err := genDoc.SaveAs(genFile); err != nil {

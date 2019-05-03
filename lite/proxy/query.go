@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"strings"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
+	cmn "github.com/ColorPlatform/prism/libs/common"
 
-	"github.com/tendermint/tendermint/crypto/merkle"
-	"github.com/tendermint/tendermint/lite"
-	lerr "github.com/tendermint/tendermint/lite/errors"
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	"github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/crypto/merkle"
+	"github.com/ColorPlatform/prism/lite"
+	lerr "github.com/ColorPlatform/prism/lite/errors"
+	rpcclient "github.com/ColorPlatform/prism/rpc/client"
+	ctypes "github.com/ColorPlatform/prism/rpc/core/types"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // GetWithProof will query the key on the given node, and verify it has

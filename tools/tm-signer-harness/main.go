@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/tendermint/tendermint/crypto/ed25519"
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/privval"
-	"github.com/tendermint/tendermint/tools/tm-signer-harness/internal"
-	"github.com/tendermint/tendermint/version"
+	"github.com/ColorPlatform/prism/crypto/ed25519"
+	"github.com/ColorPlatform/prism/libs/log"
+	"github.com/ColorPlatform/prism/privval"
+	"github.com/ColorPlatform/prism/tools/tm-signer-harness/internal"
+	"github.com/ColorPlatform/prism/version"
 )
 
 const (

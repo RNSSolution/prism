@@ -5,9 +5,9 @@ import (
 	"net"
 	"time"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/libs/log"
-	"github.com/tendermint/tendermint/types"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/libs/log"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // SignerServiceEndpointOption sets an optional parameter on the SignerServiceEndpoint.

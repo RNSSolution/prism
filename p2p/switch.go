@@ -8,9 +8,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/tendermint/tendermint/config"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/p2p/conn"
+	"github.com/ColorPlatform/prism/config"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/p2p/conn"
+	"github.com/ColorPlatform/prism/types"
 )
 
 const (
@@ -86,6 +87,8 @@ type Switch struct {
 	rng *cmn.Rand // seed for randomizing dial times and orders
 
 	metrics *Metrics
+
+	leagues types.Leagues
 }
 
 // NetAddress returns the address the switch is listening on.
@@ -114,6 +117,7 @@ func NewSwitch(
 		metrics:       NopMetrics(),
 		transport:     transport,
 		filterTimeout: defaultFilterTimeout,
+		leagues:       types.MakeEmptyLeagues(),
 	}
 
 	// Ensure we have a completely undeterministic PRNG.
@@ -193,6 +197,16 @@ func (sw *Switch) NodeInfo() NodeInfo {
 // NOTE: Not goroutine safe.
 func (sw *Switch) SetNodeKey(nodeKey *NodeKey) {
 	sw.nodeKey = nodeKey
+}
+
+// SetLeagues sets the topology of the network.
+// NOTE: Not goroutine safe.
+func (sw *Switch) SetLeagues(leagues types.Leagues) {
+	sw.leagues = leagues
+}
+
+func (sw *Switch) Leagues() types.Leagues {
+	return sw.leagues
 }
 
 //---------------------------------------------------------------------

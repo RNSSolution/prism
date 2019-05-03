@@ -3,8 +3,8 @@ package types
 import (
 	"time"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
-	tmtime "github.com/tendermint/tendermint/types/time"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	tmtime "github.com/ColorPlatform/prism/types/time"
 )
 
 // Canonical* wraps the structs in types for amino encoding them for use in SignBytes / the Signable interface.
@@ -38,6 +38,16 @@ type CanonicalVote struct {
 	Round     int64         `binary:"fixed64"`
 	BlockID   CanonicalBlockID
 	Timestamp time.Time
+	ChainID   string
+}
+
+type CanonicalVoteList struct {
+	Type      SignedMsgType // type alias for byte
+	Height    int64         `binary:"fixed64"`
+	Round     int64         `binary:"fixed64"`
+	BlockID   CanonicalBlockID
+	Timestamp time.Time
+	Votes     []CanonicalVote
 	ChainID   string
 }
 
@@ -79,6 +89,23 @@ func CanonicalizeVote(chainID string, vote *Vote) CanonicalVote {
 		Timestamp: vote.Timestamp,
 		ChainID:   chainID,
 	}
+}
+
+func CanonicalizeVoteList(chainID string, vl *VoteList) CanonicalVoteList {
+	res := CanonicalVoteList{
+		Type:      vl.Type,
+		Height:    vl.Height,
+		Round:     int64(vl.Round), // cast int->int64 to make amino encode it fixed64 (does not work for int)
+		BlockID:   CanonicalizeBlockID(vl.BlockID),
+		Timestamp: vl.Timestamp,
+		ChainID:   chainID,
+		Votes:     make([]CanonicalVote, len(vl.Votes)),
+	}
+
+	for i := range(vl.Votes) {
+		res.Votes[i] = CanonicalizeVote(chainID, &vl.Votes[i])
+	}
+	return res
 }
 
 // CanonicalTime can be used to stringify time in a canonical way.

@@ -5,8 +5,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
-	nm "github.com/tendermint/tendermint/node"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	nm "github.com/ColorPlatform/prism/node"
+	"github.com/ColorPlatform/prism/types"
 )
 
 // AddNodeFlags exposes some common configuration options on the command-line
@@ -55,6 +56,8 @@ func NewRunNodeCmd(nodeProvider nm.NodeProvider) *cobra.Command {
 				return fmt.Errorf("Failed to create node: %v", err)
 			}
 
+			nm.SetSelf(n)
+			types.DefineLeagues(n.Leagues())
 			// Stop upon receiving SIGTERM or CTRL-C.
 			cmn.TrapSignal(logger, func() {
 				if n.IsRunning() {

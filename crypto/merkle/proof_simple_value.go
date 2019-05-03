@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/tendermint/tendermint/crypto/tmhash"
-	cmn "github.com/tendermint/tendermint/libs/common"
+	"github.com/ColorPlatform/prism/crypto/tmhash"
+	cmn "github.com/ColorPlatform/prism/libs/common"
 )
 
 const ProofOpSimpleValue = "simple:v"

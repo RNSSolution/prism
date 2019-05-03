@@ -10,17 +10,17 @@ import (
 
 	"github.com/pkg/errors"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/libs/fail"
-	"github.com/tendermint/tendermint/libs/log"
-	tmtime "github.com/tendermint/tendermint/types/time"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/libs/fail"
+	"github.com/ColorPlatform/prism/libs/log"
+	tmtime "github.com/ColorPlatform/prism/types/time"
 
-	cfg "github.com/tendermint/tendermint/config"
-	cstypes "github.com/tendermint/tendermint/consensus/types"
-	tmevents "github.com/tendermint/tendermint/libs/events"
-	"github.com/tendermint/tendermint/p2p"
-	sm "github.com/tendermint/tendermint/state"
-	"github.com/tendermint/tendermint/types"
+	cfg "github.com/ColorPlatform/prism/config"
+	cstypes "github.com/ColorPlatform/prism/consensus/types"
+	tmevents "github.com/ColorPlatform/prism/libs/events"
+	"github.com/ColorPlatform/prism/p2p"
+	sm "github.com/ColorPlatform/prism/state"
+	"github.com/ColorPlatform/prism/types"
 )
 
 //-----------------------------------------------------------------------------
@@ -342,6 +342,7 @@ go run scripts/json2wal/main.go wal.json $WALFILE # rebuild the file without cor
 
 // timeoutRoutine: receive requests for timeouts on tickChan and fire timeouts on tockChan
 // receiveRoutine: serializes processing of proposoals, block parts, votes; coordinates state transitions
+// Used by tests
 func (cs *ConsensusState) startRoutines(maxSteps int) {
 	err := cs.timeoutTicker.Start()
 	if err != nil {
@@ -704,7 +705,7 @@ func (cs *ConsensusState) handleMsg(mi msgInfo) {
 			// We probably don't want to stop the peer here. The vote does not
 			// necessarily comes from a malicious peer but can be just broadcasted by
 			// a typical peer.
-			// https://github.com/tendermint/tendermint/issues/1281
+			// https://github.com/ColorPlatform/prism/issues/1281
 		}
 
 		// NOTE: the vote is broadcast to peers by the reactor listening
@@ -720,10 +721,14 @@ func (cs *ConsensusState) handleMsg(mi msgInfo) {
 
 	if err != nil {
 		// Causes TestReactorValidatorSetChanges to timeout
-		// https://github.com/tendermint/tendermint/issues/3406
+		// https://github.com/ColorPlatform/prism/issues/3406
 		// cs.Logger.Error("Error with msg", "height", cs.Height, "round", cs.Round,
 		// 	"peer", peerID, "err", err, "msg", msg)
 	}
+}
+
+func (cs *ConsensusState) isLeader() bool {
+	return cs.Validators.IsLeagueLeader(cs.privValidator)
 }
 
 func (cs *ConsensusState) handleTimeout(ti timeoutInfo, rs cstypes.RoundState) {
@@ -748,13 +753,21 @@ func (cs *ConsensusState) handleTimeout(ti timeoutInfo, rs cstypes.RoundState) {
 		cs.enterPropose(ti.Height, 0)
 	case cstypes.RoundStepPropose:
 		cs.eventBus.PublishEventTimeoutPropose(cs.RoundStateEvent())
-		cs.enterPrevote(ti.Height, ti.Round)
-	case cstypes.RoundStepPrevoteWait:
+		cs.enterInLeaguePrevote(ti.Height, ti.Round)
+	case cstypes.RoundStepInLeaguePrevoteWait:
 		cs.eventBus.PublishEventTimeoutWait(cs.RoundStateEvent())
-		cs.enterPrecommit(ti.Height, ti.Round)
-	case cstypes.RoundStepPrecommitWait:
+		if cs.isLeader() {
+			cs.enterIntraLeaguePreVote(ti.Height, ti.Round)
+		} else {
+			cs.enterLeagueCommit(ti.Height, ti.Round)
+		}
+	case cstypes.RoundStepIntraLeaguePrecommitWait:
 		cs.eventBus.PublishEventTimeoutWait(cs.RoundStateEvent())
-		cs.enterPrecommit(ti.Height, ti.Round)
+		cs.enterIntraLeaguePrecommit(ti.Height, ti.Round)
+		cs.enterNewRound(ti.Height, ti.Round+1)
+	case cstypes.RoundStepLeagueCommit:
+		cs.eventBus.PublishEventTimeoutWait(cs.RoundStateEvent())
+		cs.enterLeagueCommit(ti.Height, ti.Round)
 		cs.enterNewRound(ti.Height, ti.Round+1)
 	default:
 		panic(fmt.Sprintf("Invalid timeout step: %v", ti.Step))
@@ -868,7 +881,7 @@ func (cs *ConsensusState) enterPropose(height int64, round int) {
 		// else, we'll enterPrevote when the rest of the proposal is received (in AddProposalBlockPart),
 		// or else after timeoutPropose
 		if cs.isProposalComplete() {
-			cs.enterPrevote(height, cs.Round)
+			cs.enterInLeaguePrevote(height, cs.Round)
 		}
 	}()
 
@@ -984,19 +997,19 @@ func (cs *ConsensusState) createProposalBlock() (block *types.Block, blockParts 
 // Enter: proposal block and POL is ready.
 // Prevote for LockedBlock if we're locked, or ProposalBlock if valid.
 // Otherwise vote nil.
-func (cs *ConsensusState) enterPrevote(height int64, round int) {
-	if cs.Height != height || round < cs.Round || (cs.Round == round && cstypes.RoundStepPrevote <= cs.Step) {
+func (cs *ConsensusState) enterInLeaguePrevote(height int64, round int) {
+	if cs.Height != height || round < cs.Round || (cs.Round == round && cstypes.RoundStepInLeaguePrevote <= cs.Step) {
 		cs.Logger.Debug(fmt.Sprintf("enterPrevote(%v/%v): Invalid args. Current step: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
 		return
 	}
 
 	defer func() {
 		// Done enterPrevote:
-		cs.updateRoundStep(round, cstypes.RoundStepPrevote)
+		cs.updateRoundStep(round, cstypes.RoundStepInLeaguePrevote)
 		cs.newStep()
 	}()
 
-	cs.Logger.Info(fmt.Sprintf("enterPrevote(%v/%v). Current: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
+	cs.Logger.Info(fmt.Sprintf("enterInLeaguePrevote(%v/%v). Current: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
 
 	// Sign and broadcast vote as necessary
 	cs.doPrevote(height, round)
@@ -1038,27 +1051,98 @@ func (cs *ConsensusState) defaultDoPrevote(height int64, round int) {
 	cs.signAddVote(types.PrevoteType, cs.ProposalBlock.Hash(), cs.ProposalBlockParts.Header())
 }
 
-// Enter: any +2/3 prevotes at next round.
-func (cs *ConsensusState) enterPrevoteWait(height int64, round int) {
+func (cs *ConsensusState) defaultInLeagueDoPrevote(height int64, round int) {
 	logger := cs.Logger.With("height", height, "round", round)
 
-	if cs.Height != height || round < cs.Round || (cs.Round == round && cstypes.RoundStepPrevoteWait <= cs.Step) {
-		logger.Debug(fmt.Sprintf("enterPrevoteWait(%v/%v): Invalid args. Current step: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
+	// If a block is locked, prevote that.
+	if cs.LockedBlock != nil {
+		logger.Info("enterInLeaguePrevote: Block was locked")
+		cs.signAddVote(types.PrevoteType, cs.LockedBlock.Hash(), cs.LockedBlockParts.Header())
 		return
 	}
-	if !cs.Votes.Prevotes(round).HasTwoThirdsAny() {
-		cmn.PanicSanity(fmt.Sprintf("enterPrevoteWait(%v/%v), but Prevotes does not have any +2/3 votes", height, round))
+
+	// If ProposalBlock is nil, prevote nil.
+	if cs.ProposalBlock == nil {
+		logger.Info("enterInLeaguePrevote: ProposalBlock is nil")
+		cs.signAddVote(types.PrevoteType, nil, types.PartSetHeader{})
+		return
 	}
-	logger.Info(fmt.Sprintf("enterPrevoteWait(%v/%v). Current: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
+
+	// Validate proposal block
+	err := cs.blockExec.ValidateBlock(cs.state, cs.ProposalBlock)
+	if err != nil {
+		// ProposalBlock is invalid, prevote nil.
+		logger.Error("enterInLeaguePrevote: ProposalBlock is invalid", "err", err)
+		cs.signAddVote(types.PrevoteType, nil, types.PartSetHeader{})
+		return
+	}
+
+	// Prevote cs.ProposalBlock
+	// NOTE: the proposal signature is validated when it is received,
+	// and the proposal block parts are validated as they are received (against the merkle hash in the proposal)
+	logger.Info("enterInLeaguePrevote: ProposalBlock is valid")
+	cs.signAddVote(types.PrevoteType, cs.ProposalBlock.Hash(), cs.ProposalBlockParts.Header())
+}
+
+// Enter: any +2/3 prevotes at next round.
+func (cs *ConsensusState) enterInLeaguePrevoteWait(height int64, round int) {
+	logger := cs.Logger.With("height", height, "round", round)
+
+	if cs.Height != height || round < cs.Round || (cs.Round == round && cstypes.RoundStepInLeaguePrevoteWait <= cs.Step) {
+		logger.Debug(fmt.Sprintf("enterInLeaguePrevoteWait(%v/%v): Invalid args. Current step: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
+		return
+	}
+	if !cs.Votes.Prevotes(round).ThresholdPassed() {
+		cmn.PanicSanity(fmt.Sprintf("enterInLeaguePrevoteWait(%v/%v), but Prevotes does not have any +2/3 votes", height, round))
+	}
+	logger.Info(fmt.Sprintf("enterInLeaguePrevoteWait(%v/%v). Current: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
 
 	defer func() {
-		// Done enterPrevoteWait:
-		cs.updateRoundStep(round, cstypes.RoundStepPrevoteWait)
+		// Done enterInLeaguePrevoteWait:
+		cs.updateRoundStep(round, cstypes.RoundStepInLeaguePrevoteWait)
 		cs.newStep()
 	}()
 
 	// Wait for some more prevotes; enterPrecommit
-	cs.scheduleTimeout(cs.config.Prevote(round), height, round, cstypes.RoundStepPrevoteWait)
+	cs.scheduleTimeout(cs.config.Prevote(round), height, round, cstypes.RoundStepInLeaguePrevoteWait)
+}
+
+func (cs *ConsensusState) enterIntraLeaguePreVote(height int64, round int) {
+	if cs.Height != height || round < cs.Round || (cs.Round == round && cstypes.RoundStepInLeaguePrevote <= cs.Step) || !cs.isLeader() {
+		cs.Logger.Debug(fmt.Sprintf("enterPrevote(%v/%v): Invalid args. Current step: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
+		return
+	}
+
+	defer func() {
+		// Done enterPrevote:
+		cs.updateRoundStep(round, cstypes.RoundStepInLeaguePrevote)
+		cs.newStep()
+	}()
+
+	cs.Logger.Info(fmt.Sprintf("enterInLeaguePrevote(%v/%v). Current: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
+	// cs.doIntraLeaguePrevote()
+	
+	leagues := types.GetLeagues()
+	self, err := leagues.GetPeer(cs.privValidator.GetPubKey().Address())
+	if err != nil {
+		panic("Failed to find self")
+	}
+	league := self.League
+
+	if league < 0 || league >= leagues.Leagues {
+		panic(fmt.Sprintf("Unexpected league ID: %v", league))
+	}
+	leaguePeers := leagues.GetPeers(league)
+
+	voteSet := cs.Votes.Prevotes(int(height))
+	var votes []*types.Vote
+	for _,peer := range(leaguePeers) {
+		if vote := voteSet.GetByAddress(peer.PubKey.Address()); vote != nil {
+			votes = append(votes, vote)
+		}
+	} 
+	cs.Logger.Info(fmt.Sprintf("enterIntraLeaguePrevote: vote list is ready: %v", votes))
+	cs.signAddVoteList(types.LeaguePrevoteListType, cs.ProposalBlock.Hash(), cs.ProposalBlockParts.Header(), votes)
 }
 
 // Enter: `timeoutPrevote` after any +2/3 prevotes.
@@ -1067,10 +1151,10 @@ func (cs *ConsensusState) enterPrevoteWait(height int64, round int) {
 // Lock & precommit the ProposalBlock if we have enough prevotes for it (a POL in this round)
 // else, unlock an existing lock and precommit nil if +2/3 of prevotes were nil,
 // else, precommit nil otherwise.
-func (cs *ConsensusState) enterPrecommit(height int64, round int) {
+func (cs *ConsensusState) enterIntraLeaguePrecommit(height int64, round int) {
 	logger := cs.Logger.With("height", height, "round", round)
 
-	if cs.Height != height || round < cs.Round || (cs.Round == round && cstypes.RoundStepPrecommit <= cs.Step) {
+	if cs.Height != height || round < cs.Round || (cs.Round == round && cstypes.RoundStepIntraLeaguePrecommit <= cs.Step) {
 		logger.Debug(fmt.Sprintf("enterPrecommit(%v/%v): Invalid args. Current step: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
 		return
 	}
@@ -1079,7 +1163,7 @@ func (cs *ConsensusState) enterPrecommit(height int64, round int) {
 
 	defer func() {
 		// Done enterPrecommit:
-		cs.updateRoundStep(round, cstypes.RoundStepPrecommit)
+		cs.updateRoundStep(round, cstypes.RoundStepIntraLeaguePrecommit)
 		cs.newStep()
 	}()
 
@@ -1174,7 +1258,7 @@ func (cs *ConsensusState) enterPrecommitWait(height int64, round int) {
 				height, round, cs.Height, cs.Round, cs.TriggeredTimeoutPrecommit))
 		return
 	}
-	if !cs.Votes.Precommits(round).HasTwoThirdsAny() {
+	if !cs.Votes.Precommits(round).ThresholdPassed() {
 		cmn.PanicSanity(fmt.Sprintf("enterPrecommitWait(%v/%v), but Precommits does not have any +2/3 votes", height, round))
 	}
 	logger.Info(fmt.Sprintf("enterPrecommitWait(%v/%v). Current: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
@@ -1186,15 +1270,15 @@ func (cs *ConsensusState) enterPrecommitWait(height int64, round int) {
 	}()
 
 	// Wait for some more precommits; enterNewRound
-	cs.scheduleTimeout(cs.config.Precommit(round), height, round, cstypes.RoundStepPrecommitWait)
+	cs.scheduleTimeout(cs.config.Precommit(round), height, round, cstypes.RoundStepIntraLeaguePrecommitWait)
 
 }
 
 // Enter: +2/3 precommits for block
-func (cs *ConsensusState) enterCommit(height int64, commitRound int) {
+func (cs *ConsensusState) enterLeagueCommit(height int64, commitRound int) {
 	logger := cs.Logger.With("height", height, "commitRound", commitRound)
 
-	if cs.Height != height || cstypes.RoundStepCommit <= cs.Step {
+	if cs.Height != height || cstypes.RoundStepLeagueCommit <= cs.Step {
 		logger.Debug(fmt.Sprintf("enterCommit(%v/%v): Invalid args. Current step: %v/%v/%v", height, commitRound, cs.Height, cs.Round, cs.Step))
 		return
 	}
@@ -1203,7 +1287,7 @@ func (cs *ConsensusState) enterCommit(height int64, commitRound int) {
 	defer func() {
 		// Done enterCommit:
 		// keep cs.Round the same, commitRound points to the right Precommits set.
-		cs.updateRoundStep(cs.Round, cstypes.RoundStepCommit)
+		cs.updateRoundStep(cs.Round, cstypes.RoundStepLeagueCommit)
 		cs.CommitRound = commitRound
 		cs.CommitTime = tmtime.Now()
 		cs.newStep()
@@ -1268,7 +1352,7 @@ func (cs *ConsensusState) tryFinalizeCommit(height int64) {
 
 // Increment height and goto cstypes.RoundStepNewHeight
 func (cs *ConsensusState) finalizeCommit(height int64) {
-	if cs.Height != height || cs.Step != cstypes.RoundStepCommit {
+	if cs.Height != height || cs.Step != cstypes.RoundStepLeagueCommit {
 		cs.Logger.Debug(fmt.Sprintf("finalizeCommit(%v): Invalid args. Current step: %v/%v/%v", height, cs.Height, cs.Round, cs.Step))
 		return
 	}
@@ -1496,11 +1580,13 @@ func (cs *ConsensusState) addProposalBlockPart(msg *BlockPartMessage, peerID p2p
 
 		if cs.Step <= cstypes.RoundStepPropose && cs.isProposalComplete() {
 			// Move onto the next step
-			cs.enterPrevote(height, cs.Round)
+			cs.enterInLeaguePrevote(height, cs.Round)
+			/* 
 			if hasTwoThirds { // this is optimisation as this will be triggered when prevote is added
 				cs.enterPrecommit(height, cs.Round)
 			}
-		} else if cs.Step == cstypes.RoundStepCommit {
+			*/
+		} else if cs.Step == cstypes.RoundStepLeagueCommit {
 			// If we're waiting on the proposal block...
 			cs.tryFinalizeCommit(height)
 		}
@@ -1638,20 +1724,20 @@ func (cs *ConsensusState) addVote(vote *types.Vote, peerID p2p.ID) (added bool, 
 		}
 
 		// If +2/3 prevotes for *anything* for future round:
-		if cs.Round < vote.Round && prevotes.HasTwoThirdsAny() {
+		if cs.Round < vote.Round && prevotes.ThresholdPassed() {
 			// Round-skip if there is any 2/3+ of votes ahead of us
 			cs.enterNewRound(height, vote.Round)
-		} else if cs.Round == vote.Round && cstypes.RoundStepPrevote <= cs.Step { // current round
+		} else if cs.Round == vote.Round && cstypes.RoundStepInLeaguePrevote <= cs.Step { // current round
 			blockID, ok := prevotes.TwoThirdsMajority()
 			if ok && (cs.isProposalComplete() || len(blockID.Hash) == 0) {
-				cs.enterPrecommit(height, vote.Round)
-			} else if prevotes.HasTwoThirdsAny() {
-				cs.enterPrevoteWait(height, vote.Round)
+				cs.enterIntraLeaguePrecommit(height, vote.Round)
+			} else if prevotes.ThresholdPassed() {
+				cs.enterInLeaguePrevoteWait(height, vote.Round)
 			}
 		} else if cs.Proposal != nil && 0 <= cs.Proposal.POLRound && cs.Proposal.POLRound == vote.Round {
 			// If the proposal is now complete, enter prevote of cs.Round.
 			if cs.isProposalComplete() {
-				cs.enterPrevote(height, cs.Round)
+				cs.enterInLeaguePrevote(height, cs.Round)
 			}
 		}
 
@@ -1663,16 +1749,16 @@ func (cs *ConsensusState) addVote(vote *types.Vote, peerID p2p.ID) (added bool, 
 		if ok {
 			// Executed as TwoThirdsMajority could be from a higher round
 			cs.enterNewRound(height, vote.Round)
-			cs.enterPrecommit(height, vote.Round)
+			cs.enterIntraLeaguePrecommit(height, vote.Round)
 			if len(blockID.Hash) != 0 {
-				cs.enterCommit(height, vote.Round)
+				cs.enterLeagueCommit(height, vote.Round)
 				if cs.config.SkipTimeoutCommit && precommits.HasAll() {
 					cs.enterNewRound(cs.Height, 0)
 				}
 			} else {
 				cs.enterPrecommitWait(height, vote.Round)
 			}
-		} else if cs.Round <= vote.Round && precommits.HasTwoThirdsAny() {
+		} else if cs.Round <= vote.Round && precommits.ThresholdPassed() {
 			cs.enterNewRound(height, vote.Round)
 			cs.enterPrecommitWait(height, vote.Round)
 		}
@@ -1702,6 +1788,32 @@ func (cs *ConsensusState) signVote(type_ types.SignedMsgType, hash []byte, heade
 	}
 	err := cs.privValidator.SignVote(cs.state.ChainID, vote)
 	return vote, err
+}
+
+func (cs *ConsensusState) signVoteList(type_ types.SignedMsgType, hash []byte, header types.PartSetHeader, votes []*types.Vote) (*types.VoteList, error) {
+	// Flush the WAL. Otherwise, we may not recompute the same vote to sign, and the privValidator will refuse to sign anything.
+	cs.wal.FlushAndSync()
+
+	addr := cs.privValidator.GetPubKey().Address()
+	valIndex, _ := cs.Validators.GetByAddress(addr)
+
+	votesCopy := make([]types.Vote, len(votes))
+	for i, vote := range(votes) {
+		votesCopy[i] = *vote
+	}
+
+	voteList := &types.VoteList{
+		ValidatorAddress: addr,
+		ValidatorIndex:   valIndex,
+		Height:           cs.Height,
+		Round:            cs.Round,
+		Timestamp:        cs.voteTime(),
+		Type:             type_,
+		BlockID:          types.BlockID{Hash: hash, PartsHeader: header},
+		Votes:            votesCopy,
+	}
+	err := cs.privValidator.SignVoteList(cs.state.ChainID, voteList)
+	return voteList, err
 }
 
 func (cs *ConsensusState) voteTime() time.Time {
@@ -1737,6 +1849,24 @@ func (cs *ConsensusState) signAddVote(type_ types.SignedMsgType, hash []byte, he
 	}
 	//if !cs.replayMode {
 	cs.Logger.Error("Error signing vote", "height", cs.Height, "round", cs.Round, "vote", vote, "err", err)
+	//}
+	return nil
+}
+
+// sign the vote list and publish on internalMsgQueue
+func (cs *ConsensusState) signAddVoteList(type_ types.SignedMsgType, hash []byte, header types.PartSetHeader, votes []*types.Vote) *types.VoteList {
+	// if we don't have a key or we're not in the validator set, do nothing
+	if cs.privValidator == nil || !cs.Validators.HasAddress(cs.privValidator.GetPubKey().Address()) {
+		return nil
+	}
+	voteList, err := cs.signVoteList(type_, hash, header, votes)
+	if err == nil {
+		// cs.sendInternalMessage(msgInfo{&VoteListMessage{voteList}, ""})
+		cs.Logger.Info("Signed and pushed vote", "height", cs.Height, "round", cs.Round, "voteList", voteList, "err", err)
+		return voteList
+	}
+	//if !cs.replayMode {
+	cs.Logger.Error("Error signing vote list", "height", cs.Height, "round", cs.Round, "voteList", voteList, "err", err)
 	//}
 	return nil
 }

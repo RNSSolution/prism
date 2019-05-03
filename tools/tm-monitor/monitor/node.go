@@ -7,13 +7,13 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/tendermint/tendermint/crypto"
-	"github.com/tendermint/tendermint/libs/events"
-	"github.com/tendermint/tendermint/libs/log"
-	ctypes "github.com/tendermint/tendermint/rpc/core/types"
-	rpc_client "github.com/tendermint/tendermint/rpc/lib/client"
-	em "github.com/tendermint/tendermint/tools/tm-monitor/eventmeter"
-	tmtypes "github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/crypto"
+	"github.com/ColorPlatform/prism/libs/events"
+	"github.com/ColorPlatform/prism/libs/log"
+	ctypes "github.com/ColorPlatform/prism/rpc/core/types"
+	rpc_client "github.com/ColorPlatform/prism/rpc/lib/client"
+	em "github.com/ColorPlatform/prism/tools/tm-monitor/eventmeter"
+	tmtypes "github.com/ColorPlatform/prism/types"
 )
 
 const maxRestarts = 25

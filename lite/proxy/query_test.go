@@ -9,14 +9,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/tendermint/tendermint/abci/example/kvstore"
-	"github.com/tendermint/tendermint/crypto/merkle"
-	"github.com/tendermint/tendermint/lite"
-	certclient "github.com/tendermint/tendermint/lite/client"
-	nm "github.com/tendermint/tendermint/node"
-	"github.com/tendermint/tendermint/rpc/client"
-	rpctest "github.com/tendermint/tendermint/rpc/test"
-	"github.com/tendermint/tendermint/types"
+	"github.com/ColorPlatform/prism/abci/example/kvstore"
+	"github.com/ColorPlatform/prism/crypto/merkle"
+	"github.com/ColorPlatform/prism/lite"
+	certclient "github.com/ColorPlatform/prism/lite/client"
+	nm "github.com/ColorPlatform/prism/node"
+	"github.com/ColorPlatform/prism/rpc/client"
+	rpctest "github.com/ColorPlatform/prism/rpc/test"
+	"github.com/ColorPlatform/prism/types"
 )
 
 var node *nm.Node
