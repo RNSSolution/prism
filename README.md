@@ -11,7 +11,18 @@ clustered transaction confirmation.
 2. More Decentralized than other DPoS networks, thus being more Robust and
 harder to bribe the mining consensus participants.
 
-For protocol details, see [the beige paper](https://color-platform.org/~colors/_assets/down/Color_Prism.pdf).
+## Technical Details
+
+|     |     |
+| --- | --- |
+| **Consensus Algorithm Type** | Modified DPoS |
+| **Number of Consensus Participants** | 49 (Main) 28 (Backup) |
+| **Block interval** | 0.5 Second |
+| **Block Confirmation** | 1.0 Second |
+| **Maximum Block Size** | 1.0 Mega byte |
+| **TPS (Transactions per second)** | 2000-4000 |
+
+For further details, see [the beige paper](https://color-platform.org/~colors/_assets/down/Color_Prism.pdf).
 
 ## Note on Current Development Stage
 
