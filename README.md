@@ -1,7 +1,5 @@
 # Color Prism
 
-Color Prism Consensus algorithm
-
 The Color Prism Consensus algorithm will be the backbone of the Color Platform, ensuring
 dApp and Core transaction flows happen accordingly. Using the Color Consensus we believe it
 will achieve two main things:
