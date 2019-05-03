@@ -15,7 +15,7 @@ For protocol details, see [the beige paper](https://color-platform.org/~colors/_
 
 ## Note on Current Development Stage
 
-Prism is being actively developed and the current version is a draft implementation of the consensus algorithm.
+Prism is being actively developed and the current version is a draft implementation of 3 leagues with 3 nodes each.
 
 ## Minimum requirements
 
