@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/ColorPlatform/prism/types"
 	"github.com/ColorPlatform/prism/crypto"
 	"github.com/ColorPlatform/prism/crypto/ed25519"
 	cmn "github.com/ColorPlatform/prism/libs/common"
@@ -21,6 +22,9 @@ const testCh = 0x01
 type mockNodeInfo struct {
 	addr *NetAddress
 }
+
+func (ni mockNodeInfo) League() int                         { return types.InvalidLeague }
+func (ni mockNodeInfo) NodeID() int                         { return types.InvalidNodeId }
 
 func (ni mockNodeInfo) ID() ID                              { return ni.addr.ID }
 func (ni mockNodeInfo) NetAddress() (*NetAddress, error)    { return ni.addr, nil }

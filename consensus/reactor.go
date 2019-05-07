@@ -16,6 +16,7 @@ import (
 	"github.com/ColorPlatform/prism/p2p"
 	sm "github.com/ColorPlatform/prism/state"
 	"github.com/ColorPlatform/prism/types"
+	"github.com/ColorPlatform/prism/globals"
 	tmtime "github.com/ColorPlatform/prism/types/time"
 )
 
@@ -468,7 +469,9 @@ OUTER_LOOP:
 
 		// Send proposal Block parts?
 		if rs.ProposalBlockParts.HasHeader(prs.ProposalBlockPartsHeader) {
-			if index, ok := rs.ProposalBlockParts.BitArray().Sub(prs.ProposalBlockParts.Copy()).PickRandom(); ok {
+			index, ok := rs.ProposalBlockParts.BitArray().Sub(prs.ProposalBlockParts.Copy()).PickRandom()
+			// Gossip block to peers from the same League
+			if ok && !(globals.UseLeagues() && globals.League() != peer.NodeInfo().League()) {
 				part := rs.ProposalBlockParts.GetPart(index)
 				msg := &BlockPartMessage{
 					Height: rs.Height, // This tells peer that this part applies to us.
@@ -688,7 +691,7 @@ func (conR *ConsensusReactor) gossipVotesForHeight(logger log.Logger, rs *cstype
 		}
 	}
 	// If there are precommits to send...
-	if prs.Step <= cstypes.RoundStepIntraLeaguePrecommitWait && prs.Round != -1 && prs.Round <= rs.Round {
+	if prs.Step <= cstypes.RoundStepInterLeaguePrecommitWait && prs.Round != -1 && prs.Round <= rs.Round {
 		if ps.PickSendVote(rs.Votes.Precommits(prs.Round)) {
 			logger.Debug("Picked rs.Precommits(prs.Round) to send", "round", prs.Round)
 			return true

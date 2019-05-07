@@ -905,6 +905,8 @@ func makeNodeInfo(
 	}
 	nodeInfo := p2p.DefaultNodeInfo{
 		ProtocolVersion: protocolVersion,
+		League_:         config.Consensus.League,
+		NodeId_:         config.Consensus.NodeId,
 		ID_:             nodeID,
 		Network:         chainID,
 		Version:         version.TMCoreSemVer,

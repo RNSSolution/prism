@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	cmn "github.com/tendermint/tendermint/libs/common"
-	"github.com/tendermint/tendermint/types"
+	cmn "github.com/ColorPlatform/prism/libs/common"
+	"github.com/ColorPlatform/prism/types"
+	"github.com/ColorPlatform/prism/globals"
 )
 
 //-----------------------------------------------------------------------------
@@ -32,11 +33,18 @@ const (
 
 // IsValid returns true if the step is valid, false if unknown/undefined.
 func (rs RoundStepType) IsValid() bool {
+	if globals.UseLeagues() {
+		return rs.isValidPrism()
+	}
 	return uint8(rs) >= 0x01 && uint8(rs) <= 0x08
 }
 
 // String returns a string
 func (rs RoundStepType) String() string {
+	if globals.UseLeagues() {
+		return rs.stringPrism()
+	}
+
 	switch rs {
 	case RoundStepNewHeight:
 		return "RoundStepNewHeight"

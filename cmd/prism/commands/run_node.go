@@ -7,7 +7,8 @@ import (
 
 	cmn "github.com/ColorPlatform/prism/libs/common"
 	nm "github.com/ColorPlatform/prism/node"
-	"github.com/ColorPlatform/prism/types"
+
+	"github.com/ColorPlatform/prism/globals"
 )
 
 // AddNodeFlags exposes some common configuration options on the command-line
@@ -42,6 +43,8 @@ func AddNodeFlags(cmd *cobra.Command) {
 
 	// consensus flags
 	cmd.Flags().Bool("consensus.create_empty_blocks", config.Consensus.CreateEmptyBlocks, "Set this to false to only produce blocks when there are txs or when the AppHash changes")
+	cmd.Flags().Bool("consensus.use_leagues", config.Consensus.UseLeagues, "Set this to false to switch to Tendermint consensus")
+
 }
 
 // NewRunNodeCmd returns the command that allows the CLI to start a node.
@@ -57,7 +60,12 @@ func NewRunNodeCmd(nodeProvider nm.NodeProvider) *cobra.Command {
 			}
 
 			nm.SetSelf(n)
-			types.DefineLeagues(n.Leagues())
+			if config.Consensus.UseLeagues {
+				globals.SetUseLeagues(true)
+				globals.DefineLeagues(n.Leagues())
+				globals.SetLeague(config.Consensus.League)
+				globals.SetNodeId(config.Consensus.NodeId)
+			}
 			// Stop upon receiving SIGTERM or CTRL-C.
 			cmn.TrapSignal(logger, func() {
 				if n.IsRunning() {

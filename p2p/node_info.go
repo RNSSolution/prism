@@ -26,6 +26,9 @@ type NodeInfo interface {
 	ID() ID
 	nodeInfoAddress
 	nodeInfoTransport
+
+	League() int
+	NodeID() int
 }
 
 type nodeInfoAddress interface {
@@ -75,6 +78,10 @@ var _ NodeInfo = DefaultNodeInfo{}
 type DefaultNodeInfo struct {
 	ProtocolVersion ProtocolVersion `json:"protocol_version"`
 
+	// League membership
+	League_    int    `json:"league"`
+	NodeId_    int    `json:"node_id"`
+
 	// Authenticate
 	// TODO: replace with NetAddress
 	ID_        ID     `json:"id"`          // authenticated identifier
@@ -100,6 +107,16 @@ type DefaultNodeInfoOther struct {
 // ID returns the node's peer ID.
 func (info DefaultNodeInfo) ID() ID {
 	return info.ID_
+}
+
+// League returns the node's league.
+func (info DefaultNodeInfo) League() int {
+	return info.League_
+}
+
+// NodeID returns the node's id in league.
+func (info DefaultNodeInfo) NodeID() int {
+	return info.NodeId_
 }
 
 // Validate checks the self-reported DefaultNodeInfo is safe.
