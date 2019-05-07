@@ -12,6 +12,21 @@ INCLUDE = -I=. -I=${GOPATH}/src -I=${GOPATH}/src/github.com/gogo/protobuf/protob
 BUILD_TAGS?='tendermint'
 BUILD_FLAGS = -ldflags "-X github.com/ColorPlatform/prism/version.GitCommit=`git rev-parse --short=8 HEAD`"
 
+# ----------------------------------
+# Parameters of Docker-based testnet
+
+# Total number of leagues
+LOCALNET_LEAGUES?=3
+# Number of nodes in a league
+LOCALNET_NODES?=3
+# The local IP network
+LOCALNET_NETWORK?="192.165.0.0/24"
+# The starting IP address assigned to Docker containers
+LOCALNET_STARTING_IP?="192.165.0.2"
+# The starting port for forwarding ports of Prism executable from Docker
+LOCALNET_STARTING_PORT?=26656
+# ----------------------------------
+
 devel: build
 
 all: check build test install
@@ -278,25 +293,26 @@ build-linux: get_tools get_vendor_deps
 build-docker-localnode:
 	@cd networks/local && make
 
-# Run a 4-node testnet locally
-localnet-start-2x2: docker-compose-4 localnet-stop 
-	@if ! [ -f build/node0/config/genesis.json ]; then docker run --rm -v $(CURDIR)/build:/prism:Z prism/localnode testnet --l 2 --v 2 --o . --populate-persistent-peers --starting-ip-address 192.166.10.2 ; fi
+# Run testnet locally
+localnet-start: docker-compose.yml localnet-stop
+	@if ! [ -f build/node0/config/genesis.json ]; then \
+		docker run --rm -v $(CURDIR)/build:/prism:Z prism/localnode testnet --l $(LOCALNET_LEAGUES) --v $(LOCALNET_NODES) \
+			--o . --populate-persistent-peers \
+			--starting-ip-address $(LOCALNET_STARTING_IP) ;\
+	fi
 	docker-compose up
 
-# Run a 9-node testnet locally
-localnet-start-3x3: docker-compose-9 localnet-stop
-	@if ! [ -f build/node8/config/genesis.json ]; then docker run --rm -v $(CURDIR)/build:/prism:Z prism/localnode testnet --l 3 --v 3 --o . --populate-persistent-peers --starting-ip-address 192.165.10.2 ; fi
-	docker-compose up
-
-docker-compose-4:
-	cp docker-compose-4.yml docker-compose.yml
-
-docker-compose-9:
-	cp docker-compose-9.yml docker-compose.yml
+docker-compose.yml: Makefile
+	python3 networks/local/generate-docker-compose-yml.py $(LOCALNET_LEAGUES) $(LOCALNET_NODES) $(LOCALNET_NETWORK) $(LOCALNET_STARTING_IP) $(LOCALNET_STARTING_PORT) > docker-compose.yml
 
 # Stop testnet
-localnet-stop:
+localnet-stop: docker-compose.yml
 	docker-compose down
+
+# Reset configuration files
+localnet-reset: docker-compose.yml
+	docker-compose down
+	docker run --rm -v $(CURDIR)/build:/prism:Z prism/localnode clean
 
 ###########################################################
 ### Remote full-nodes (sentry) using terraform and ansible

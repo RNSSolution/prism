@@ -1,5 +1,12 @@
 #!/usr/bin/env sh
 
+if [ "$1" = "clean" ]; then
+	echo "Removing configuration files..."
+	rm -rf /prism/node*
+	echo "Done"
+	exit 0;
+fi
+
 ##
 ## Input parameters
 ##
