@@ -199,7 +199,7 @@ func testPrismFiles(cmd *cobra.Command, args []string) error {
 
 		config.LogLevel = "*:error"
 
-		config.Consensus.UseLeagues = false
+		config.Consensus.UseLeagues = true
 		config.Consensus.League = node.league
 		config.Consensus.NodeId = node.nodeId
 		config.Consensus.CreateEmptyBlocksInterval = 5 * time.Second

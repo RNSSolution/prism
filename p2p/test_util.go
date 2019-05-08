@@ -24,9 +24,10 @@ type mockNodeInfo struct {
 }
 
 func (ni mockNodeInfo) League() int                         { return types.InvalidLeague }
-func (ni mockNodeInfo) NodeID() int                         { return types.InvalidNodeId }
+func (ni mockNodeInfo) NodeId() int                         { return types.InvalidNodeId }
 
 func (ni mockNodeInfo) ID() ID                              { return ni.addr.ID }
+func (ni mockNodeInfo) Address() crypto.Address             { return nil }
 func (ni mockNodeInfo) NetAddress() (*NetAddress, error)    { return ni.addr, nil }
 func (ni mockNodeInfo) Validate() error                     { return nil }
 func (ni mockNodeInfo) CompatibleWith(other NodeInfo) error { return nil }

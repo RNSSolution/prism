@@ -42,9 +42,9 @@ type ValidatorSet struct {
 	// NOTE: persisted via reflect, must be exported.
 	Validators []*Validator `json:"validators"`
 	Proposer   *Validator   `json:"proposer"`
-	Leaders    []*Validator `json:"leaders"`
 
 	// cached (unexported)
+	leaders    []*Validator `json:"leaders"`
 	totalVotingPower int64
 }
 
@@ -96,21 +96,12 @@ func (vals *ValidatorSet) IncrementProposerPriority(times int) {
 	vals.shiftByAvgProposerPriority()
 
 	var proposer *Validator
-	var leaders []*Validator
 	// Call IncrementProposerPriority(1) times times.
 	for i := 0; i < times; i++ {
 		proposer = vals.incrementProposerPriority()
 	}
 
 	vals.Proposer = proposer
-
-	leaders = vals.computeLeagueLeaders()
-	if len(leaders) > 0 && proposer.League < 0 {
-		panic("Proposer is not a league member")
-	}
-	leaders[proposer.League] = proposer
-	fmt.Printf("DEBUG: league leaders: %v\n", leaders)
-	vals.Leaders = leaders
 }
 
 func (vals *ValidatorSet) RescalePriorities(diffMax int64) {
@@ -209,12 +200,29 @@ func (vals *ValidatorSet) computeLeagueLeaders() ([]*Validator) {
 			}
 		}
 	}
+	leaders[vals.Proposer.League] = vals.Proposer
 	return leaders
 }
 
+func (vals *ValidatorSet) Leaders() ([]*Validator) {
+	if vals.leaders == nil {
+		vals.leaders = vals.computeLeagueLeaders()
+	}
+	return vals.leaders
+}
+
 func (vals *ValidatorSet) IsLeagueLeader(val PrivValidator) (bool) {
-	for _, v := range vals.Leaders {
+	for _, v := range vals.Leaders() {
 		if (val).GetPubKey() == v.PubKey {
+			return true
+		}
+	}
+	return false
+}
+
+func (vals *ValidatorSet) IsLeagueLeaderAddress(addr Address) (bool) {
+	for _, v := range vals.Leaders() {
+		if bytes.Equal(addr, v.Address) {
 			return true
 		}
 	}

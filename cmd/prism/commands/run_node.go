@@ -60,12 +60,10 @@ func NewRunNodeCmd(nodeProvider nm.NodeProvider) *cobra.Command {
 			}
 
 			nm.SetSelf(n)
-			if config.Consensus.UseLeagues {
-				globals.SetUseLeagues(true)
-				globals.DefineLeagues(n.Leagues())
-				globals.SetLeague(config.Consensus.League)
-				globals.SetNodeId(config.Consensus.NodeId)
-			}
+			globals.DefineLeagues(n.Leagues())
+			globals.SetLeague(config.Consensus.League)
+			globals.SetNodeId(config.Consensus.NodeId)
+
 			// Stop upon receiving SIGTERM or CTRL-C.
 			cmn.TrapSignal(logger, func() {
 				if n.IsRunning() {

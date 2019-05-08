@@ -21,6 +21,7 @@ import (
 	bc "github.com/ColorPlatform/prism/blockchain"
 	cfg "github.com/ColorPlatform/prism/config"
 	cs "github.com/ColorPlatform/prism/consensus"
+	"github.com/ColorPlatform/prism/crypto"
 	"github.com/ColorPlatform/prism/crypto/ed25519"
 	"github.com/ColorPlatform/prism/evidence"
 	cmn "github.com/ColorPlatform/prism/libs/common"
@@ -425,6 +426,7 @@ func NewNode(config *cfg.Config,
 	nodeInfo, err := makeNodeInfo(
 		config,
 		nodeKey.ID(),
+		nodeKey.PubKey().Address(),
 		txIndexer,
 		genDoc.ChainID,
 		p2p.NewProtocolVersion(
@@ -895,6 +897,7 @@ func (n *Node) NodeInfo() p2p.NodeInfo {
 func makeNodeInfo(
 	config *cfg.Config,
 	nodeID p2p.ID,
+	address crypto.Address,
 	txIndexer txindex.TxIndexer,
 	chainID string,
 	protocolVersion p2p.ProtocolVersion,
@@ -908,6 +911,7 @@ func makeNodeInfo(
 		League_:         config.Consensus.League,
 		NodeId_:         config.Consensus.NodeId,
 		ID_:             nodeID,
+		Address_:        address,
 		Network:         chainID,
 		Version:         version.TMCoreSemVer,
 		Channels: []byte{

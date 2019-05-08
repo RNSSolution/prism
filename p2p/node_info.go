@@ -6,6 +6,7 @@ import (
 
 	cmn "github.com/ColorPlatform/prism/libs/common"
 	"github.com/ColorPlatform/prism/version"
+	"github.com/ColorPlatform/prism/crypto"
 )
 
 const (
@@ -24,11 +25,12 @@ func MaxNodeInfoSize() int {
 // and determines if we're compatible.
 type NodeInfo interface {
 	ID() ID
+	Address() crypto.Address
 	nodeInfoAddress
 	nodeInfoTransport
 
 	League() int
-	NodeID() int
+	NodeId() int
 }
 
 type nodeInfoAddress interface {
@@ -84,8 +86,9 @@ type DefaultNodeInfo struct {
 
 	// Authenticate
 	// TODO: replace with NetAddress
-	ID_        ID     `json:"id"`          // authenticated identifier
-	ListenAddr string `json:"listen_addr"` // accepting incoming
+	ID_        ID              `json:"id"`          // authenticated identifier
+	Address_   crypto.Address  `json:"address"`
+	ListenAddr string          `json:"listen_addr"` // accepting incoming
 
 	// Check compatibility.
 	// Channels are HexBytes so easier to read as JSON
@@ -109,13 +112,18 @@ func (info DefaultNodeInfo) ID() ID {
 	return info.ID_
 }
 
+// Address returns the node's peer crypto address.
+func (info DefaultNodeInfo) Address() crypto.Address {
+	return info.Address_
+}
+
 // League returns the node's league.
 func (info DefaultNodeInfo) League() int {
 	return info.League_
 }
 
-// NodeID returns the node's id in league.
-func (info DefaultNodeInfo) NodeID() int {
+// NodeId returns the node's id in league.
+func (info DefaultNodeInfo) NodeId() int {
 	return info.NodeId_
 }
 

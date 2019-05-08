@@ -456,7 +456,7 @@ func (conR *ConsensusReactor) sendNewRoundStepMessage(peer p2p.Peer) {
 
 func (conR *ConsensusReactor) gossipDataRoutine(peer p2p.Peer, ps *PeerState) {
 	logger := conR.Logger.With("peer", peer)
-
+	logger.Info("Started gossipDataRoutine")
 OUTER_LOOP:
 	for {
 		// Manage disconnects from self or peer.
@@ -470,8 +470,36 @@ OUTER_LOOP:
 		// Send proposal Block parts?
 		if rs.ProposalBlockParts.HasHeader(prs.ProposalBlockPartsHeader) {
 			index, ok := rs.ProposalBlockParts.BitArray().Sub(prs.ProposalBlockParts.Copy()).PickRandom()
-			// Gossip block to peers from the same League
-			if ok && !(globals.UseLeagues() && globals.League() != peer.NodeInfo().League()) {
+			sendToPeer := false
+			if ok {
+				other_is_leader := conR.conS.Validators.IsLeagueLeaderAddress(peer.NodeInfo().Address())
+				other_is_same_league := peer.NodeInfo().League() == globals.League()
+				sendToPeer = other_is_same_league
+				if !sendToPeer {
+					sendToPeer = (conR.conS.ImTheProposer() || conR.conS.ImLeader()) && other_is_leader
+				}
+				if conR.conS.ImTheProposer() {
+					// gossip to league leaders and league members
+					logger.Debug("Trying to gossip proposal: I'm the proposer")
+				} else if conR.conS.ImLeader() {
+					// I'm leader - gossip to other leaders and league members
+					logger.Debug("Trying to gossip proposal: I'm a leader")
+				} else {
+					// Gossip to league members
+					logger.Debug("Trying to gossip proposal: I'm a node")
+				}
+				logger.Debug("Trying to gossip proposal block to peer", 
+					"other_peer", peer, 
+					"our_league", globals.League(), "other_league", peer.NodeInfo().League(),
+					"other_address", peer.NodeInfo().Address(),
+					"league_leaders", conR.conS.Validators.Leaders()[:],
+					"other_is_leader", other_is_leader,
+					"sendToPeer", sendToPeer,
+				)
+			}
+			// Gossip block to peers 
+			sendToPeer = ok
+			if sendToPeer {
 				part := rs.ProposalBlockParts.GetPart(index)
 				msg := &BlockPartMessage{
 					Height: rs.Height, // This tells peer that this part applies to us.

@@ -897,8 +897,21 @@ func (cs *ConsensusState) enterPropose(height int64, round int) {
 	}
 }
 
+func (cs * ConsensusState) ImTheProposer() bool {
+	address := cs.privValidator.GetPubKey().Address()
+	if !cs.Validators.HasAddress(address) {
+		// This node is not a validator
+		return false
+	}
+	return cs.isProposer(address)
+}
+
 func (cs *ConsensusState) isProposer(address []byte) bool {
 	return bytes.Equal(cs.Validators.GetProposer().Address, address)
+}
+
+func (cs * ConsensusState) ImLeader() bool {
+	return cs.Validators.IsLeagueLeaderAddress(cs.privValidator.GetPubKey().Address())
 }
 
 func (cs *ConsensusState) defaultDecideProposal(height int64, round int) {

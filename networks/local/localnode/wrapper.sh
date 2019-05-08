@@ -33,7 +33,12 @@ fi
 export TMHOME="/prism/node${ID}"
 
 if [ -d "`dirname ${TMHOME}/${LOG}`" ]; then
-  "$BINARY" --log_level "*:error" "$@" | tee "${TMHOME}/${LOG}"
+	umask 022
+	if [ $ID -eq 0 ]; then
+  		"$BINARY" --log_level "*:debug" "$@" | tee "${TMHOME}/${LOG}"
+  	else
+  		"$BINARY" --log_level "*:error" "$@" | tee "${TMHOME}/${LOG}"
+  	fi
 else
   "$BINARY" "$@"
 fi
