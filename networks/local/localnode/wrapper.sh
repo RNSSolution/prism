@@ -14,6 +14,8 @@ BINARY=/prism/${BINARY:-prism}
 ID=${ID:-0}
 LOG=prism.log
 
+[ -f "/prism/docker-run-before.sh" ] && source /prism/docker-run-before.sh
+
 ##
 ## Assert linux binary
 ##
@@ -31,17 +33,11 @@ fi
 ## Run binary with all parameters
 ##
 export TMHOME="/prism/node${ID}"
+mkdir -p "${TMHOME}"
 
-if [ -d "`dirname ${TMHOME}/${LOG}`" ]; then
-	umask 022
-	if [ $ID -eq 0 ]; then
-  		"$BINARY" --log_level "*:debug" "$@" | tee "${TMHOME}/${LOG}"
-  	else
-  		"$BINARY" --log_level "*:error" "$@" | tee "${TMHOME}/${LOG}"
-  	fi
-else
-  "$BINARY" "$@"
-fi
+umask 022
+"$BINARY" $RUN_ARGS "$@" | tee "${TMHOME}/${LOG}"
 
 chmod 777 -R /prism
 
+[ -f "/prism/docker-run-after.sh" ] && source /prism/docker-run-after.sh

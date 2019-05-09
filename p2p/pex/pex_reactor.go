@@ -181,7 +181,7 @@ func (r *PEXReactor) AddPeer(p Peer) {
 
 		// add to book. dont RequestAddrs right away because
 		// we don't trust inbound as much - let ensurePeersRoutine handle it.
-		err = r.book.AddAddress(addr, src)
+		err = r.book.AddAddress(addr, src, p.IsPersistent())
 		r.logErrAddrBook(err)
 	}
 }
@@ -338,7 +338,7 @@ func (r *PEXReactor) ReceiveAddrs(addrs []*p2p.NetAddress, src Peer) error {
 		}
 
 		// NOTE: we check netAddr validity and routability in book#AddAddress.
-		err = r.book.AddAddress(na, srcAddr)
+		err = r.book.AddAddress(na, srcAddr, src.IsPersistent())
 		if err != nil {
 			r.logErrAddrBook(err)
 			// XXX: should we be strict about incoming data and disconnect from a
@@ -398,6 +398,10 @@ func (r *PEXReactor) ensurePeersRoutine() {
 	}
 }
 
+type dialSpec struct {
+	addr       *p2p.NetAddress
+	persistent bool
+}
 // ensurePeers ensures that sufficient peers are connected. (once)
 //
 // heuristic that we haven't perfected yet, or, perhaps is manually edited by
@@ -425,12 +429,12 @@ func (r *PEXReactor) ensurePeers() {
 	// NOTE: range here is [10, 90]. Too high ?
 	newBias := cmn.MinInt(out, 8)*10 + 10
 
-	toDial := make(map[p2p.ID]*p2p.NetAddress)
+	toDial := make(map[p2p.ID]dialSpec)
 	// Try maxAttempts times to pick numToDial addresses to dial
 	maxAttempts := numToDial * 3
 
 	for i := 0; i < maxAttempts && len(toDial) < numToDial; i++ {
-		try := r.book.PickAddress(newBias)
+		try, persistent := r.book.PickAddress(newBias)
 		if try == nil {
 			continue
 		}
@@ -444,12 +448,12 @@ func (r *PEXReactor) ensurePeers() {
 		// so we don't even consider dialing peers that we want to wait
 		// before dialling again, or have dialed too many times already
 		r.Logger.Info("Will dial address", "addr", try)
-		toDial[try.ID] = try
+		toDial[try.ID] = dialSpec{try, persistent}
 	}
 
 	// Dial picked addresses
-	for _, addr := range toDial {
-		go r.dialPeer(addr)
+	for _, spec := range toDial {
+		go r.dialPeer(spec.addr, spec.persistent)
 	}
 
 	// If we need more addresses, pick a random peer and ask for more.
@@ -479,7 +483,7 @@ func (r *PEXReactor) dialAttemptsInfo(addr *p2p.NetAddress) (attempts int, lastD
 	return atd.number, atd.lastDialed
 }
 
-func (r *PEXReactor) dialPeer(addr *p2p.NetAddress) {
+func (r *PEXReactor) dialPeer(addr *p2p.NetAddress, persistent bool) {
 	attempts, lastDialed := r.dialAttemptsInfo(addr)
 
 	if attempts > maxAttemptsToDial {
@@ -503,7 +507,7 @@ func (r *PEXReactor) dialPeer(addr *p2p.NetAddress) {
 		}
 	}
 
-	err := r.Switch.DialPeerWithAddress(addr, false)
+	err := r.Switch.DialPeerWithAddress(addr, persistent)
 	if err != nil {
 		if _, ok := err.(p2p.ErrCurrentlyDialingOrExistingAddress); ok {
 			return

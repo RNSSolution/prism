@@ -39,7 +39,7 @@ type AddrBook interface {
 	AddPrivateIDs([]string)
 
 	// Add and remove an address
-	AddAddress(addr *p2p.NetAddress, src *p2p.NetAddress) error
+	AddAddress(addr *p2p.NetAddress, src *p2p.NetAddress, persistent bool) error
 	RemoveAddress(*p2p.NetAddress)
 
 	// Check if the address is in the book
@@ -52,7 +52,7 @@ type AddrBook interface {
 	Empty() bool
 
 	// Pick an address to dial
-	PickAddress(biasTowardsNewAddrs int) *p2p.NetAddress
+	PickAddress(biasTowardsNewAddrs int) (addr *p2p.NetAddress, persistent bool)
 
 	// Mark address
 	MarkGood(p2p.ID)
@@ -191,11 +191,11 @@ func (a *addrBook) AddPrivateIDs(IDs []string) {
 // Add address to a "new" bucket. If it's already in one, only add it probabilistically.
 // Returns error if the addr is non-routable. Does not add self.
 // NOTE: addr must not be nil
-func (a *addrBook) AddAddress(addr *p2p.NetAddress, src *p2p.NetAddress) error {
+func (a *addrBook) AddAddress(addr *p2p.NetAddress, src *p2p.NetAddress, persistent bool) error {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
-	return a.addAddress(addr, src)
+	return a.addAddress(addr, src, persistent)
 }
 
 // RemoveAddress implements AddrBook - removes the address from the book.
@@ -246,7 +246,7 @@ func (a *addrBook) Empty() bool {
 // and determines how biased we are to pick an address from a new bucket.
 // PickAddress returns nil if the AddrBook is empty or if we try to pick
 // from an empty bucket.
-func (a *addrBook) PickAddress(biasTowardsNewAddrs int) *p2p.NetAddress {
+func (a *addrBook) PickAddress(biasTowardsNewAddrs int) (*p2p.NetAddress, bool) {
 	a.mtx.Lock()
 	defer a.mtx.Unlock()
 
@@ -255,7 +255,7 @@ func (a *addrBook) PickAddress(biasTowardsNewAddrs int) *p2p.NetAddress {
 		if bookSize < 0 {
 			panic(fmt.Sprintf("Addrbook size %d (new: %d + old: %d) is less than 0", a.nNew+a.nOld, a.nNew, a.nOld))
 		}
-		return nil
+		return nil, false
 	}
 	if biasTowardsNewAddrs > 100 {
 		biasTowardsNewAddrs = 100
@@ -273,7 +273,7 @@ func (a *addrBook) PickAddress(biasTowardsNewAddrs int) *p2p.NetAddress {
 	pickFromOldBucket := (newCorrelation+oldCorrelation)*a.rand.Float64() < oldCorrelation
 	if (pickFromOldBucket && a.nOld == 0) ||
 		(!pickFromOldBucket && a.nNew == 0) {
-		return nil
+		return nil, false
 	}
 	// loop until we pick a random non-empty bucket
 	for len(bucket) == 0 {
@@ -287,11 +287,11 @@ func (a *addrBook) PickAddress(biasTowardsNewAddrs int) *p2p.NetAddress {
 	randIndex := a.rand.Intn(len(bucket))
 	for _, ka := range bucket {
 		if randIndex == 0 {
-			return ka.Addr
+			return ka.Addr, ka.Persistent
 		}
 		randIndex--
 	}
-	return nil
+	return nil, false
 }
 
 // MarkGood implements AddrBook - it marks the peer as good and
@@ -581,7 +581,7 @@ func (a *addrBook) pickOldest(bucketType byte, bucketIdx int) *knownAddress {
 
 // adds the address to a "new" bucket. if its already in one,
 // it only adds it probabilistically
-func (a *addrBook) addAddress(addr, src *p2p.NetAddress) error {
+func (a *addrBook) addAddress(addr, src *p2p.NetAddress, persistent bool) error {
 	if addr == nil || src == nil {
 		return ErrAddrBookNilAddr{addr, src}
 	}
@@ -615,6 +615,7 @@ func (a *addrBook) addAddress(addr, src *p2p.NetAddress) error {
 	if ka != nil {
 		// If its already old and the addr is the same, ignore it.
 		if ka.isOld() && ka.Addr.Equals(addr) {
+			ka.Persistent = persistent
 			return nil
 		}
 		// Already in max new buckets.
@@ -627,7 +628,7 @@ func (a *addrBook) addAddress(addr, src *p2p.NetAddress) error {
 			return nil
 		}
 	} else {
-		ka = newKnownAddress(addr, src)
+		ka = newKnownAddress(addr, src, persistent)
 	}
 
 	bucket := a.calcNewBucket(addr, src)

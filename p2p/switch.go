@@ -46,7 +46,7 @@ func MConnConfig(cfg *config.P2PConfig) conn.MConnConfig {
 // An AddrBook represents an address book from the pex package, which is used
 // to store peer addresses.
 type AddrBook interface {
-	AddAddress(addr *NetAddress, src *NetAddress) error
+	AddAddress(addr *NetAddress, src *NetAddress, persistent bool) error
 	AddOurAddress(*NetAddress)
 	OurAddress(*NetAddress) bool
 	MarkGood(ID)
@@ -436,7 +436,7 @@ func (sw *Switch) DialPeersAsync(addrBook AddrBook, peers []string, persistent b
 		for _, netAddr := range netAddrs {
 			// do not add our address or ID
 			if !netAddr.Same(ourAddr) {
-				if err := addrBook.AddAddress(netAddr, ourAddr); err != nil {
+				if err := addrBook.AddAddress(netAddr, ourAddr, persistent); err != nil {
 					if isPrivateAddr(err) {
 						sw.Logger.Debug("Won't add peer's address to addrbook", "err", err)
 					} else {
@@ -603,7 +603,7 @@ func (sw *Switch) addOutboundPeerWithConfig(
 	cfg *config.P2PConfig,
 	persistent bool,
 ) error {
-	sw.Logger.Info("Dialing peer", "address", addr)
+	sw.Logger.Info("Dialing peer", "address", addr, "persistent", persistent)
 
 	// XXX(xla): Remove the leakage of test concerns in implementation.
 	if cfg.TestDialFail {

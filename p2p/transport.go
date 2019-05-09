@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ColorPlatform/prism/crypto"
+	"github.com/ColorPlatform/prism/globals"
 	"github.com/ColorPlatform/prism/p2p/conn"
 )
 
@@ -297,6 +298,7 @@ func (mt *MultiplexTransport) acceptPeers() {
 // Cleanup removes the given address from the connections set and
 // closes the connection.
 func (mt *MultiplexTransport) Cleanup(p Peer) {
+	p.Logger.Debug("Cleanup connection for peer")
 	mt.conns.RemoveAddr(p.RemoteAddr())
 	_ = p.CloseConn()
 }
@@ -463,6 +465,7 @@ func (mt *MultiplexTransport) wrapPeer(
 		PeerMetrics(cfg.metrics),
 	)
 
+	globals.Logger().Debug("Peer created", "socketAddr", socketAddr, "persistent", cfg.persistent)
 	return p
 }
 

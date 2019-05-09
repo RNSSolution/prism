@@ -11,6 +11,7 @@ import (
 type knownAddress struct {
 	Addr        *p2p.NetAddress `json:"addr"`
 	Src         *p2p.NetAddress `json:"src"`
+	Persistent  bool            `json:"persistent"`
 	Attempts    int32           `json:"attempts"`
 	LastAttempt time.Time       `json:"last_attempt"`
 	LastSuccess time.Time       `json:"last_success"`
@@ -18,10 +19,11 @@ type knownAddress struct {
 	Buckets     []int           `json:"buckets"`
 }
 
-func newKnownAddress(addr *p2p.NetAddress, src *p2p.NetAddress) *knownAddress {
+func newKnownAddress(addr *p2p.NetAddress, src *p2p.NetAddress, persistent bool) *knownAddress {
 	return &knownAddress{
 		Addr:        addr,
 		Src:         src,
+		Persistent:  persistent,
 		Attempts:    0,
 		LastAttempt: time.Now(),
 		BucketType:  bucketTypeNew,

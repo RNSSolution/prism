@@ -50,6 +50,9 @@ type Service interface {
 
 	// SetLogger sets a logger.
 	SetLogger(log.Logger)
+
+	// GetLogger gives the logger assigned to the service.
+	GetLogger() log.Logger
 }
 
 /*
@@ -122,6 +125,11 @@ func NewBaseService(logger log.Logger, name string, impl Service) *BaseService {
 // SetLogger implements Service by setting a logger.
 func (bs *BaseService) SetLogger(l log.Logger) {
 	bs.Logger = l
+}
+
+// GetLogger implements Service by getting a logger.
+func (bs *BaseService) GetLogger() log.Logger {
+	return bs.Logger
 }
 
 // Start implements Service by calling OnStart (if defined). An error will be

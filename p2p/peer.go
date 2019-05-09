@@ -300,6 +300,7 @@ func (p *peer) hasChannel(chID byte) bool {
 
 // CloseConn closes original connection. Used for cleaning up in cases where the peer had not been started at all.
 func (p *peer) CloseConn() error {
+	p.Logger.Debug("Closing connection to peer")
 	return p.peerConn.conn.Close()
 }
 
