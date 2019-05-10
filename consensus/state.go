@@ -21,6 +21,7 @@ import (
 	"github.com/ColorPlatform/prism/p2p"
 	sm "github.com/ColorPlatform/prism/state"
 	"github.com/ColorPlatform/prism/types"
+	"github.com/ColorPlatform/prism/globals"
 )
 
 //-----------------------------------------------------------------------------
@@ -911,7 +912,7 @@ func (cs *ConsensusState) isProposer(address []byte) bool {
 }
 
 func (cs * ConsensusState) ImLeader() bool {
-	return cs.Validators.IsLeagueLeaderAddress(cs.privValidator.GetPubKey().Address())
+	return cs.Validators.IsLeagueLeaderNodeId(globals.NodeId())
 }
 
 func (cs *ConsensusState) defaultDecideProposal(height int64, round int) {

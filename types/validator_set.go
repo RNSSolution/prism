@@ -220,9 +220,9 @@ func (vals *ValidatorSet) IsLeagueLeader(val PrivValidator) (bool) {
 	return false
 }
 
-func (vals *ValidatorSet) IsLeagueLeaderAddress(addr Address) (bool) {
+func (vals *ValidatorSet) IsLeagueLeaderNodeId(nodeId int) (bool) {
 	for _, v := range vals.Leaders() {
-		if bytes.Equal(addr, v.Address) {
+		if v.NodeId == nodeId {
 			return true
 		}
 	}

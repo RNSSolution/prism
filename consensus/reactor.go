@@ -472,7 +472,7 @@ OUTER_LOOP:
 			index, ok := rs.ProposalBlockParts.BitArray().Sub(prs.ProposalBlockParts.Copy()).PickRandom()
 			sendToPeer := false
 			if ok {
-				other_is_leader := conR.conS.Validators.IsLeagueLeaderAddress(peer.NodeInfo().Address())
+				other_is_leader := conR.conS.Validators.IsLeagueLeaderNodeId(peer.NodeInfo().NodeId())
 				other_is_same_league := peer.NodeInfo().League() == globals.League()
 				sendToPeer = other_is_same_league
 				if !sendToPeer {
@@ -498,7 +498,7 @@ OUTER_LOOP:
 				)
 			}
 			// Gossip block to peers 
-			sendToPeer = ok
+			// sendToPeer = ok
 			if sendToPeer {
 				part := rs.ProposalBlockParts.GetPart(index)
 				msg := &BlockPartMessage{
