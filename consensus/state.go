@@ -586,6 +586,19 @@ func (cs *ConsensusState) newStep() {
 	}
 }
 
+// filterByLeague Returns a new validator set where all validators belong to the specified league
+/*
+func filterByLeague(vals * types.ValidatorSet, league int) *types.ValidatorSet {
+	result := &types.ValidatorSet{}
+	valz []*types.Validator
+	for _,v := range vals.Validators {
+		if v.League == league {
+			valz = append(valz, v)
+		}
+	}
+	result.Validators = valz
+}
+*/
 //-----------------------------------------
 // the main go routines
 
@@ -1060,7 +1073,7 @@ func (cs *ConsensusState) enterPrevoteWait(height int64, round int) {
 		logger.Debug(fmt.Sprintf("enterPrevoteWait(%v/%v): Invalid args. Current step: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
 		return
 	}
-	if !cs.Votes.Prevotes(round).ThresholdPassed() {
+	if !cs.Votes.Prevotes(round).ThresholdPassedInLeague(globals.League()) {
 		cmn.PanicSanity(fmt.Sprintf("enterPrevoteWait(%v/%v), but Prevotes does not have any +2/3 votes", height, round))
 	}
 	logger.Info(fmt.Sprintf("enterPrevoteWait(%v/%v). Current: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
@@ -1188,7 +1201,7 @@ func (cs *ConsensusState) enterPrecommitWait(height int64, round int) {
 				height, round, cs.Height, cs.Round, cs.TriggeredTimeoutPrecommit))
 		return
 	}
-	if !cs.Votes.Precommits(round).ThresholdPassed() {
+	if !cs.Votes.Precommits(round).ThresholdPassedInLeague(globals.League()) {
 		cmn.PanicSanity(fmt.Sprintf("enterPrecommitWait(%v/%v), but Precommits does not have any +2/3 votes", height, round))
 	}
 	logger.Info(fmt.Sprintf("enterPrecommitWait(%v/%v). Current: %v/%v/%v", height, round, cs.Height, cs.Round, cs.Step))
@@ -1553,7 +1566,7 @@ func (cs *ConsensusState) tryAddVote(vote *types.Vote, peerID p2p.ID) (bool, err
 //-----------------------------------------------------------------------------
 
 func (cs *ConsensusState) addVote(vote *types.Vote, peerID p2p.ID) (added bool, err error) {
-	cs.Logger.Debug("addVote", "voteHeight", vote.Height, "voteType", vote.Type, "valIndex", vote.ValidatorIndex, "csHeight", cs.Height)
+	cs.Logger.Debug("addVote", "voteHeight", vote.Height, "voteType", vote.Type, "valIndex", vote.ValidatorIndex, "csHeight", cs.Height, "peerID", peerID)
 
 	// A precommit for the previous height?
 	// These come in while we wait timeoutCommit
@@ -1573,7 +1586,7 @@ func (cs *ConsensusState) addVote(vote *types.Vote, peerID p2p.ID) (added bool, 
 		cs.evsw.FireEvent(types.EventVote, vote)
 
 		// if we can skip timeoutCommit and have all the votes now,
-		if cs.config.SkipTimeoutCommit && cs.LastCommit.HasAll() {
+		if cs.config.SkipTimeoutCommit && cs.LastCommit.HasAllFromLeague(globals.League()) {
 			// go straight to new round (skip timeout commit)
 			// cs.scheduleTimeout(time.Duration(0), cs.Height, 0, cstypes.RoundStepNewHeight)
 			cs.enterNewRound(cs.Height, 0)
@@ -1652,14 +1665,14 @@ func (cs *ConsensusState) addVote(vote *types.Vote, peerID p2p.ID) (added bool, 
 		}
 
 		// If +2/3 prevotes for *anything* for future round:
-		if cs.Round < vote.Round && prevotes.ThresholdPassed() {
+		if cs.Round < vote.Round && prevotes.ThresholdPassedInLeague(globals.League()) {
 			// Round-skip if there is any 2/3+ of votes ahead of us
 			cs.enterNewRound(height, vote.Round)
 		} else if cs.Round == vote.Round && cstypes.RoundStepPrevote <= cs.Step { // current round
 			blockID, ok := prevotes.TwoThirdsMajority()
 			if ok && (cs.isProposalComplete() || len(blockID.Hash) == 0) {
 				cs.enterPrecommit(height, vote.Round)
-			} else if prevotes.ThresholdPassed() {
+			} else if prevotes.ThresholdPassedInLeague(globals.League()) {
 				cs.enterPrevoteWait(height, vote.Round)
 			}
 		} else if cs.Proposal != nil && 0 <= cs.Proposal.POLRound && cs.Proposal.POLRound == vote.Round {
@@ -1680,13 +1693,13 @@ func (cs *ConsensusState) addVote(vote *types.Vote, peerID p2p.ID) (added bool, 
 			cs.enterPrecommit(height, vote.Round)
 			if len(blockID.Hash) != 0 {
 				cs.enterCommit(height, vote.Round)
-				if cs.config.SkipTimeoutCommit && precommits.HasAll() {
+				if cs.config.SkipTimeoutCommit && precommits.HasAllFromLeague(globals.League()) {
 					cs.enterNewRound(cs.Height, 0)
 				}
 			} else {
 				cs.enterPrecommitWait(height, vote.Round)
 			}
-		} else if cs.Round <= vote.Round && precommits.ThresholdPassed() {
+		} else if cs.Round <= vote.Round && precommits.ThresholdPassedInLeague(globals.League()) {
 			cs.enterNewRound(height, vote.Round)
 			cs.enterPrecommitWait(height, vote.Round)
 		}

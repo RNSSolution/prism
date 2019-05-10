@@ -389,13 +389,54 @@ func (voteSet *VoteSet) IsCommit() bool {
 	return voteSet.maj23 != nil
 }
 
-func (voteSet *VoteSet) ThresholdPassed() bool {
+func (voteSet *VoteSet) countVotesByLeagueUnsafe(league int) int64 {
+	var sum int64 = 0
+	for _,vote := range voteSet.votes {
+		if vote == nil {
+			continue
+		}
+		valIndex := vote.ValidatorIndex
+		_,validator := voteSet.valSet.GetByIndex(valIndex)
+		if validator == nil {
+			panic("nil validator for vote")
+		}
+		if validator.League == league {
+			sum += validator.VotingPower
+		}
+	}
+	return sum
+}
+
+func (voteSet *VoteSet) ThresholdPassedInLeague(league int) bool {
+	if voteSet == nil {
+		return false
+	}
+	voteSet.mtx.Lock()
+	defer voteSet.mtx.Unlock()
+	// Count league sum
+	sum := voteSet.countVotesByLeagueUnsafe(league)
+	total := voteSet.valSet.TotalVotingPowerByLeague(league)
+	return sum > total*2/3
+}
+
+func (voteSet *VoteSet) ThresholdPassed_Unused() bool {
 	if voteSet == nil {
 		return false
 	}
 	voteSet.mtx.Lock()
 	defer voteSet.mtx.Unlock()
 	return voteSet.sum > voteSet.valSet.TotalVotingPower()*2/3
+}
+
+func (voteSet *VoteSet) HasAllFromLeague(league int) bool {
+	if voteSet == nil {
+		return false
+	}
+	voteSet.mtx.Lock()
+	defer voteSet.mtx.Unlock()
+	sum := voteSet.countVotesByLeagueUnsafe(league)
+	total := voteSet.valSet.TotalVotingPowerByLeague(league)
+	return sum == total
 }
 
 func (voteSet *VoteSet) HasAll() bool {

@@ -332,6 +332,23 @@ func (vals *ValidatorSet) TotalVotingPower() int64 {
 	return vals.totalVotingPower
 }
 
+func (vals *ValidatorSet) TotalVotingPowerByLeague(league int) int64 {
+	sum := int64(0)
+	for _, val := range vals.Validators {
+		if val.League == league {
+			// mind overflow
+			sum = safeAddClip(sum, val.VotingPower)
+			if sum > MaxTotalVotingPower {
+				panic(fmt.Sprintf(
+					"Total voting power should be guarded to not exceed %v; got: %v",
+					MaxTotalVotingPower,
+					sum))
+			}
+		}
+	}
+	return sum
+}
+
 // GetProposer returns the current proposer. If the validator set is empty, nil
 // is returned.
 func (vals *ValidatorSet) GetProposer() (proposer *Validator) {

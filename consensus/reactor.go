@@ -168,8 +168,13 @@ func (conR *ConsensusReactor) AddPeer(peer p2p.Peer) {
 
 	// Begin routines for this peer.
 	go conR.gossipDataRoutine(peer, peerState)
-	go conR.gossipVotesRoutine(peer, peerState)
-	go conR.queryMaj23Routine(peer, peerState)
+	// Votes gossip only whithin the league
+	// if peer.NodeInfo().League() == globals.League() 
+	{
+		globals.Logger().Debug("Launching gossip voting routines", "module", "consensus")
+		go conR.gossipVotesRoutine(peer, peerState)
+		go conR.queryMaj23Routine(peer, peerState)
+	}
 
 	// Send our state to peer.
 	// If we're fast_syncing, broadcast a RoundStepMessage later upon SwitchToConsensus().
@@ -456,7 +461,7 @@ func (conR *ConsensusReactor) sendNewRoundStepMessage(peer p2p.Peer) {
 
 func (conR *ConsensusReactor) gossipDataRoutine(peer p2p.Peer, ps *PeerState) {
 	logger := conR.Logger.With("peer", peer)
-	logger.Info("Started gossipDataRoutine")
+	logger.Debug("Started gossipDataRoutine")
 OUTER_LOOP:
 	for {
 		// Manage disconnects from self or peer.
@@ -489,16 +494,12 @@ OUTER_LOOP:
 					logger.Debug("Trying to gossip proposal: I'm a node")
 				}
 				logger.Debug("Trying to gossip proposal block to peer", 
-					"other_peer", peer, 
 					"our_league", globals.League(), "other_league", peer.NodeInfo().League(),
-					"other_address", peer.NodeInfo().Address(),
-					"league_leaders", conR.conS.Validators.Leaders()[:],
 					"other_is_leader", other_is_leader,
 					"sendToPeer", sendToPeer,
 				)
 			}
 			// Gossip block to peers 
-			// sendToPeer = ok
 			if sendToPeer {
 				part := rs.ProposalBlockParts.GetPart(index)
 				msg := &BlockPartMessage{
@@ -623,7 +624,7 @@ func (conR *ConsensusReactor) gossipDataForCatchup(logger log.Logger, rs *cstype
 
 func (conR *ConsensusReactor) gossipVotesRoutine(peer p2p.Peer, ps *PeerState) {
 	logger := conR.Logger.With("peer", peer)
-
+	logger.Debug("Started gossipVotesRoutine")
 	// Simple hack to throttle logs upon sleep.
 	var sleeping = 0
 
@@ -693,7 +694,7 @@ OUTER_LOOP:
 }
 
 func (conR *ConsensusReactor) gossipVotesForHeight(logger log.Logger, rs *cstypes.RoundState, prs *cstypes.PeerRoundState, ps *PeerState) bool {
-
+	logger.Debug("gossipVotesForHeight", "round_state", rs, "peer_round_state", prs, "peer_state", ps)
 	// If there are lastCommits to send...
 	if prs.Step == cstypes.RoundStepNewHeight {
 		if ps.PickSendVote(rs.LastCommit) {
