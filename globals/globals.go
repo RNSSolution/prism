@@ -1,15 +1,11 @@
 package globals
 
-import (
-	"github.com/ColorPlatform/prism/types"
-	"github.com/ColorPlatform/prism/libs/log"
-)
-
 var (
-	useLeagues	bool
-	league      int = types.InvalidLeague
-	nodeId      int = types.InvalidNodeId
-	logger      log.Logger
+	useLeagues bool
+	league     int = -1 // types.InvalidLeague
+	nodeId     int = -1 // types.InvalidNodeId
+	// TODO make a separate package for these constants
+	// avoid using types package to prevent circular loops in imports
 )
 
 func UseLeagues() bool {
@@ -34,27 +30,5 @@ func NodeId() int {
 
 func SetNodeId(val int) {
 	nodeId = val
-}
-
-func SetLogger(log log.Logger) {
-	logger = log
-}
-
-func Logger() log.Logger {
-	return logger 
-}
-
-//------------------------------------------------------------
-// Global info about leagues
-var (
-	leagueDoc *types.LeaguesDoc
-)
-
-func DefineLeagues(doc *types.LeaguesDoc) {
-	leagueDoc = doc
-}
-
-func GetLeagues() *types.LeaguesDoc {
-	return leagueDoc
 }
 

@@ -185,10 +185,13 @@ func NewConsensusState(
 //----------------------------------------
 // Public interface
 
+var tracer log.Logger
+
 // SetLogger implements Service.
 func (cs *ConsensusState) SetLogger(l log.Logger) {
 	cs.BaseService.Logger = l
 	cs.timeoutTicker.SetLogger(l)
+	tracer = l.With("tracer", "yes")
 }
 
 // SetEventBus sets event bus.
@@ -279,6 +282,7 @@ func (cs *ConsensusState) LoadCommit(height int64) *types.Commit {
 // OnStart implements cmn.Service.
 // It loads the latest state via the WAL, and starts the timeout and receive routines.
 func (cs *ConsensusState) OnStart() error {
+	tracer. Debug("OnStart")
 	if err := cs.evsw.Start(); err != nil {
 		return err
 	}
@@ -292,6 +296,7 @@ func (cs *ConsensusState) OnStart() error {
 			cs.Logger.Error("Error loading ConsensusState wal", "err", err.Error())
 			return err
 		}
+		tracer. Debug("OnStart", "WAL", "initialized")
 		cs.wal = wal
 	}
 
@@ -303,6 +308,7 @@ func (cs *ConsensusState) OnStart() error {
 	if err := cs.timeoutTicker.Start(); err != nil {
 		return err
 	}
+	tracer. Debug("OnStart", "timeoutTicker", "initialized")
 
 	// we may have lost some votes if the process crashed
 	// reload from consensus log to catchup
@@ -332,10 +338,13 @@ go run scripts/json2wal/main.go wal.json $WALFILE # rebuild the file without cor
 	}
 
 	// now start the receiveRoutine
+	tracer. Debug("OnStart", "receiveRoutine", "starting")
+
 	go cs.receiveRoutine(0)
 
 	// schedule the first round!
 	// use GetRoundState so we don't race the receiveRoutine for access
+	tracer. Debug("OnStart", "scheduleRound0", "cs.GetRoundState()")
 	cs.scheduleRound0(cs.GetRoundState())
 
 	return nil

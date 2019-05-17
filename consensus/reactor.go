@@ -17,6 +17,7 @@ import (
 	sm "github.com/ColorPlatform/prism/state"
 	"github.com/ColorPlatform/prism/types"
 	"github.com/ColorPlatform/prism/globals"
+	global_logger "github.com/ColorPlatform/prism/globals/logger"
 	tmtime "github.com/ColorPlatform/prism/types/time"
 )
 
@@ -171,7 +172,7 @@ func (conR *ConsensusReactor) AddPeer(peer p2p.Peer) {
 	// Votes gossip only whithin the league
 	// if peer.NodeInfo().League() == globals.League() 
 	{
-		globals.Logger().Debug("Launching gossip voting routines", "module", "consensus")
+		global_logger.Logger().Debug("Launching gossip voting routines", "module", "consensus")
 		go conR.gossipVotesRoutine(peer, peerState)
 		go conR.queryMaj23Routine(peer, peerState)
 	}
@@ -694,7 +695,7 @@ OUTER_LOOP:
 }
 
 func (conR *ConsensusReactor) gossipVotesForHeight(logger log.Logger, rs *cstypes.RoundState, prs *cstypes.PeerRoundState, ps *PeerState) bool {
-	logger.Debug("gossipVotesForHeight", "round_state", rs, "peer_round_state", prs, "peer_state", ps)
+	// logger.Debug("gossipVotesForHeight", "round_state", rs, "peer_round_state", prs, "peer_state", ps)
 	// If there are lastCommits to send...
 	if prs.Step == cstypes.RoundStepNewHeight {
 		if ps.PickSendVote(rs.LastCommit) {

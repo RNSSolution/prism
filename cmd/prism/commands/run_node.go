@@ -9,6 +9,8 @@ import (
 	nm "github.com/ColorPlatform/prism/node"
 
 	"github.com/ColorPlatform/prism/globals"
+	global_leagues "github.com/ColorPlatform/prism/globals/leagues"
+	global_logger "github.com/ColorPlatform/prism/globals/logger"
 )
 
 // AddNodeFlags exposes some common configuration options on the command-line
@@ -60,10 +62,10 @@ func NewRunNodeCmd(nodeProvider nm.NodeProvider) *cobra.Command {
 			}
 
 			nm.SetSelf(n)
-			globals.DefineLeagues(n.Leagues())
+			global_leagues.DefineLeagues(n.Leagues())
 			globals.SetLeague(config.Consensus.League)
 			globals.SetNodeId(config.Consensus.NodeId)
-			globals.SetLogger(logger.With("module", "unspecified"))
+			global_logger.SetLogger(logger.With("module", "unspecified"))
 
 			// Stop upon receiving SIGTERM or CTRL-C.
 			cmn.TrapSignal(logger, func() {

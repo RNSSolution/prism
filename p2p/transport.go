@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/ColorPlatform/prism/crypto"
-	"github.com/ColorPlatform/prism/globals"
+	"github.com/ColorPlatform/prism/globals/logger"
 	"github.com/ColorPlatform/prism/p2p/conn"
 )
 
@@ -465,7 +465,7 @@ func (mt *MultiplexTransport) wrapPeer(
 		PeerMetrics(cfg.metrics),
 	)
 
-	globals.Logger().Debug("Peer created", "socketAddr", socketAddr, "persistent", cfg.persistent)
+	logger.Logger().Debug("Peer created", "socketAddr", socketAddr, "persistent", cfg.persistent)
 	return p
 }
 
