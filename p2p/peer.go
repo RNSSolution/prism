@@ -36,6 +36,9 @@ type Peer interface {
 
 	Set(string, interface{})
 	Get(string) interface{}
+
+	GetCommandChannel() PeerCommandChannel
+	SetCommandChannel(PeerCommandChannel)
 }
 
 //----------------------------------------------------------
@@ -114,6 +117,8 @@ type peer struct {
 
 	metrics       *Metrics
 	metricsTicker *time.Ticker
+
+	cmnd PeerCommandChannel
 }
 
 type PeerOption func(*peer)
@@ -134,6 +139,7 @@ func newPeer(
 		Data:          cmn.NewCMap(),
 		metricsTicker: time.NewTicker(metricsTickerDuration),
 		metrics:       NopMetrics(),
+		cmnd:          make(PeerCommandChannel, 10),
 	}
 
 	p.mconn = createMConnection(
@@ -276,6 +282,14 @@ func (p *peer) Get(key string) interface{} {
 // Set sets the data for the given key.
 func (p *peer) Set(key string, data interface{}) {
 	p.Data.Set(key, data)
+}
+
+func (p * peer) SetCommandChannel(ch PeerCommandChannel) {
+	p.cmnd = ch
+}
+
+func (p * peer) GetCommandChannel() PeerCommandChannel {
+	return p.cmnd
 }
 
 // hasChannel returns true if the peer reported

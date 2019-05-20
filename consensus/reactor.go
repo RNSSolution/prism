@@ -240,29 +240,9 @@ func (conR *ConsensusReactor) Receive(chID byte, src p2p.Peer, msgBytes []byte) 
 		case *HasVoteMessage:
 			ps.ApplyHasVoteMessage(msg)
 		case *VoteSetMaj23Message:
-			cs := conR.conS
-			cs.mtx.Lock()
-			height, votes := cs.Height, cs.Votes
-			cs.mtx.Unlock()
-			if height != msg.Height {
-				return
-			}
-			// Peer claims to have a maj23 for some BlockID at H,R,S,
-			err := votes.SetPeerMaj23(msg.Round, msg.Type, ps.peer.ID(), msg.BlockID)
+			ourVotes, err := ps.ApplyVoteSetMaj23Message(msg, conR)
 			if err != nil {
-				conR.Switch.StopPeerForError(src, err)
 				return
-			}
-			// Respond with a VoteSetBitsMessage showing which votes we have.
-			// (and consequently shows which we don't have)
-			var ourVotes *cmn.BitArray
-			switch msg.Type {
-			case types.PrevoteType:
-				ourVotes = votes.Prevotes(msg.Round).BitArrayByBlockID(msg.BlockID)
-			case types.PrecommitType:
-				ourVotes = votes.Precommits(msg.Round).BitArrayByBlockID(msg.BlockID)
-			default:
-				panic("Bad VoteSetBitsMessage field Type. Forgot to add a check in ValidateBasic?")
 			}
 			src.TrySend(VoteSetBitsChannel, cdc.MustMarshalBinaryBare(&VoteSetBitsMessage{
 				Height:  msg.Height,
@@ -1363,6 +1343,35 @@ func (ps *PeerState) ApplyVoteSetBitsMessage(msg *VoteSetBitsMessage, ourVotes *
 			votes.Update(hasVotes)
 		}
 	}
+}
+
+func (ps * PeerState) ApplyVoteSetMaj23Message(msg *VoteSetMaj23Message, conR * ConsensusReactor) (*cmn.BitArray, error) {
+	conR.Logger.Debug("ApplyVoteSetMaj23Message", "msg", msg, "peer", ps.peer)
+	cs := conR.conS
+	cs.mtx.Lock()
+	height, votes := cs.Height, cs.Votes
+	cs.mtx.Unlock()
+	if height != msg.Height {
+		return nil, errors.New("Height mismatch")
+	}
+	// Peer claims to have a maj23 for some BlockID at H,R,S,
+	err := votes.SetPeerMaj23(msg.Round, msg.Type, ps.peer.ID(), msg.BlockID)
+	if err != nil {
+		conR.Switch.StopPeerForError(ps.peer, err)
+		return nil, err
+	}
+	// Respond with a VoteSetBitsMessage showing which votes we have.
+	// (and consequently shows which we don't have)
+	var ourVotes *cmn.BitArray
+	switch msg.Type {
+	case types.PrevoteType:
+		ourVotes = votes.Prevotes(msg.Round).BitArrayByBlockID(msg.BlockID)
+	case types.PrecommitType:
+		ourVotes = votes.Precommits(msg.Round).BitArrayByBlockID(msg.BlockID)
+	default:
+		panic("Bad VoteSetBitsMessage field Type. Forgot to add a check in ValidateBasic?")
+	}
+	return ourVotes, nil
 }
 
 // String returns a string representation of the PeerState
