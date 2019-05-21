@@ -158,6 +158,7 @@ func NewConsensusState(
 		txNotifier:       txNotifier,
 		peerMsgQueue:     make(chan msgInfo, msgQueueSize),
 		internalMsgQueue: make(chan msgInfo, msgQueueSize),
+		changeNotifyQueue: make(chan p2p.PeerCommand, msgQueueSize),
 		timeoutTicker:    NewTimeoutTicker(),
 		statsMsgQueue:    make(chan msgInfo, msgQueueSize),
 		done:             make(chan struct{}),
@@ -722,6 +723,11 @@ func (cs *ConsensusState) handleMsg(mi msgInfo) {
 		added, err = cs.tryAddVote(msg.Vote, peerID)
 		if added {
 			cs.statsMsgQueue <- mi
+			if msg.Vote.Type == types.PrevoteType {
+				cs.changeNotifyQueue <- p2p.HasNewVote
+			} else {
+				cs.changeNotifyQueue <- p2p.HasNewPrecommit
+			}
 		}
 
 		if err == ErrAddingVote {

@@ -46,6 +46,8 @@ type ConsensusReactor struct {
 	eventBus *types.EventBus
 
 	metrics *Metrics
+
+	peerCommandChannels []p2p.PeerCommandChannel
 }
 
 type ReactorOption func(*ConsensusReactor)
@@ -96,6 +98,10 @@ func (conR *ConsensusReactor) OnStop() {
 	if !conR.FastSync() {
 		conR.conS.Wait()
 	}
+	// close and forget all command channels
+	for ; len (conR.peerCommandChannels) > 0; {
+		conR.forgetCommandChannel(nil, conR.peerCommandChannels[0])
+	}
 }
 
 // SwitchToConsensus switches from fast_sync mode to consensus mode.
@@ -121,6 +127,7 @@ func (conR *ConsensusReactor) SwitchToConsensus(state sm.State, blocksSynced int
 		conR.Logger.Error("Error starting conS", "err", err)
 		return
 	}
+	go conR.commandRoutine()
 }
 
 // GetChannels implements Reactor
@@ -167,13 +174,17 @@ func (conR *ConsensusReactor) AddPeer(peer p2p.Peer) {
 	peerState := NewPeerState(peer).SetLogger(conR.Logger)
 	peer.Set(types.PeerStateKey, peerState)
 
+	peerCommandChannel := make(p2p.PeerCommandChannel, msgQueueSize)
+	peer.Set(types.PeerCommandChannelKey, peerCommandChannel)
+
 	// Begin routines for this peer.
 	go conR.gossipDataRoutine(peer, peerState)
 	// Votes gossip only whithin the league
 	// if peer.NodeInfo().League() == globals.League() 
 	{
 		global_logger.Logger().Debug("Launching gossip voting routines", "module", "consensus")
-		go conR.gossipVotesRoutine(peer, peerState)
+		go conR.gossipVotesRoutine(peer, peerState, peerCommandChannel)
+		conR.registerCommandChannel(peer, peerCommandChannel)
 		go conR.queryMaj23Routine(peer, peerState)
 	}
 
@@ -189,6 +200,9 @@ func (conR *ConsensusReactor) RemovePeer(peer p2p.Peer, reason interface{}) {
 	if !conR.IsRunning() {
 		return
 	}
+	peerCommandChannel := peer.Get(types.PeerCommandChannelKey).(p2p.PeerCommandChannel)
+	conR.forgetCommandChannel(peer, peerCommandChannel)
+	close(peerCommandChannel)
 	// TODO
 	// ps, ok := peer.Get(PeerStateKey).(*PeerState)
 	// if !ok {
@@ -351,6 +365,35 @@ func (conR *ConsensusReactor) FastSync() bool {
 
 //--------------------------------------
 
+func (conR * ConsensusReactor) registerCommandChannel(peer p2p.Peer, ch p2p.PeerCommandChannel) {
+	conR.mtx.RLock()
+	defer conR.mtx.RUnlock()
+	conR.peerCommandChannels = append(conR.peerCommandChannels, ch)
+}
+
+func (conR * ConsensusReactor) forgetCommandChannel(peer p2p.Peer, ch p2p.PeerCommandChannel) {
+	var pos int
+	found := false
+
+	conR.mtx.RLock()
+	defer conR.mtx.RUnlock()
+	for i,ch_ := range(conR.peerCommandChannels) {
+		if ch_ == ch {
+			found = true
+			pos = i
+			break
+		}
+	}
+	if found {
+		if pos == len(conR.peerCommandChannels) {
+			conR.peerCommandChannels = conR.peerCommandChannels[:pos]
+		} else {
+			conR.peerCommandChannels = append(conR.peerCommandChannels[:pos], conR.peerCommandChannels[pos+1:]...)
+		}
+	}
+	
+}
+
 // subscribeToBroadcastEvents subscribes for new round steps and votes
 // using internal pubsub defined on state to broadcast
 // them to peers upon receiving.
@@ -438,6 +481,26 @@ func (conR *ConsensusReactor) sendNewRoundStepMessage(peer p2p.Peer) {
 	rs := conR.conS.GetRoundState()
 	nrsMsg := makeRoundStepMessage(rs)
 	peer.Send(StateChannel, cdc.MustMarshalBinaryBare(nrsMsg))
+}
+
+func (conR *ConsensusReactor) commandRoutine() {
+	logger := conR.Logger
+	logger.Debug("commandRoutine started")
+	for {
+		cmd, ok := <-conR.conS.changeNotifyQueue
+		if !ok {
+			logger.Debug("commandRoutine finished")
+			return
+		}
+		logger.Debug("commandRoutine received command", "command", cmd)
+		if cmd == p2p.HasNewVote || cmd == p2p.HasNewPrecommit {
+			conR.mtx.RLock()
+			defer conR.mtx.RUnlock()
+			for _,ch := range(conR.peerCommandChannels) {
+				ch <- cmd
+			}
+		}
+	}
 }
 
 func (conR *ConsensusReactor) gossipDataRoutine(peer p2p.Peer, ps *PeerState) {
@@ -603,7 +666,7 @@ func (conR *ConsensusReactor) gossipDataForCatchup(logger log.Logger, rs *cstype
 	time.Sleep(conR.conS.config.PeerGossipSleepDuration)
 }
 
-func (conR *ConsensusReactor) gossipVotesRoutine(peer p2p.Peer, ps *PeerState) {
+func (conR *ConsensusReactor) gossipVotesRoutine(peer p2p.Peer, ps *PeerState, cmdChan p2p.PeerCommandChannel) {
 	logger := conR.Logger.With("peer", peer)
 	logger.Debug("Started gossipVotesRoutine")
 	// Simple hack to throttle logs upon sleep.
@@ -669,7 +732,25 @@ OUTER_LOOP:
 			sleeping = 1
 		}
 
-		time.Sleep(conR.conS.config.PeerGossipSleepDuration)
+		// time.Sleep(conR.conS.config.PeerGossipSleepDuration)
+		/*
+		select {
+		case cmd, ok := <- cmdChan:
+			if !ok {
+				logger.Debug("gossipVotesRoutine: command channel closed")
+				return
+			} 
+			logger.Debug("gossipVotesRoutine: received command", "command", cmd)
+		case <- time.After(conR.conS.config.PeerGossipSleepDuration):
+			// Timeout
+		}
+		*/
+		cmd, ok := <- cmdChan
+		if !ok {
+			logger.Debug("gossipVotesRoutine: command channel closed")
+			return
+		} 
+		logger.Debug("gossipVotesRoutine: received command", "command", cmd)
 		continue OUTER_LOOP
 	}
 }
