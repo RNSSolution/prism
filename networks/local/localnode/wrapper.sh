@@ -36,7 +36,7 @@ export TMHOME="/prism/node${ID}"
 mkdir -p "${TMHOME}"
 
 umask 022
-"$BINARY" $RUN_ARGS "$@" | tee "${TMHOME}/${LOG}"
+"$BINARY" $COMMAND_ARGS "$@" $SUBCOMMAND_ARGS | tee "${TMHOME}/${LOG}"
 
 chmod 777 -R /prism
 
