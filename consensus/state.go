@@ -7,6 +7,8 @@ import (
 	"runtime/debug"
 	"sync"
 	"time"
+	"encoding/binary"
+	"crypto/sha256"
 
 	"github.com/pkg/errors"
 
@@ -158,7 +160,7 @@ func NewConsensusState(
 		txNotifier:       txNotifier,
 		peerMsgQueue:     make(chan msgInfo, msgQueueSize),
 		internalMsgQueue: make(chan msgInfo, msgQueueSize),
-		changeNotifyQueue: make(chan p2p.PeerCommand, msgQueueSize),
+		changeNotifyQueue: make(chan p2p.PeerCommand, 1),
 		timeoutTicker:    NewTimeoutTicker(),
 		statsMsgQueue:    make(chan msgInfo, msgQueueSize),
 		done:             make(chan struct{}),
@@ -575,6 +577,7 @@ func (cs *ConsensusState) updateToState(state sm.State) {
 	cs.ValidRound = -1
 	cs.ValidBlock = nil
 	cs.ValidBlockParts = nil
+	fmt.Println("DEBUG: Creating HeightVoteSet", "ChainID", state.ChainID, "height", height, "validators", validators)
 	cs.Votes = cstypes.NewHeightVoteSet(state.ChainID, height, validators)
 	cs.CommitRound = -1
 	cs.LastCommit = lastPrecommits
@@ -723,11 +726,7 @@ func (cs *ConsensusState) handleMsg(mi msgInfo) {
 		added, err = cs.tryAddVote(msg.Vote, peerID)
 		if added {
 			cs.statsMsgQueue <- mi
-			if msg.Vote.Type == types.PrevoteType {
-				cs.changeNotifyQueue <- p2p.HasNewVote
-			} else {
-				cs.changeNotifyQueue <- p2p.HasNewPrecommit
-			}
+			cs.notifyChange(msg)
 		}
 
 		if err == ErrAddingVote {
@@ -801,6 +800,20 @@ func (cs *ConsensusState) handleTxsAvailable() {
 	cs.enterPropose(cs.Height, 0)
 }
 
+func (cs * ConsensusState) notifyChange(msg * VoteMessage) {
+	var cmd p2p.PeerCommand 
+	if msg.Vote.Type == types.PrevoteType {
+		cmd = p2p.HasNewVote
+	} else {
+		cmd = p2p.HasNewPrecommit
+	}
+	select {
+	case cs.changeNotifyQueue <- cmd:
+		// don't lock is there are commands pending
+	default:
+	}
+}
+
 //-----------------------------------------------------------------------------
 // State functions
 // Used internally by handleTimeout and handleMsg to make state transitions
@@ -837,6 +850,8 @@ func (cs *ConsensusState) enterNewRound(height int64, round int) {
 	// but we fire an event, so update the round step first
 	cs.updateRoundStep(round, cstypes.RoundStepNewRound)
 	cs.Validators = validators
+	cs.computeProposer()
+
 	if round == 0 {
 		// We've already reset these upon new height,
 		// and meanwhile we might have received a proposal
@@ -927,6 +942,29 @@ func (cs *ConsensusState) enterPropose(height int64, round int) {
 		logger.Info("enterPropose: Not our turn to propose", "proposer", cs.Validators.GetProposer().Address, "privValidator", cs.privValidator)
 	}
 }
+
+func (cs * ConsensusState) computeProposer() {
+	fmt.Println("DEBUG: Last block data: ", "ID", cs.state.LastBlockID, "height", cs.state.LastBlockHeight)
+	fmt.Println("DEBUG: current data: ", "height", cs.Height, "round", cs.Round)
+
+	hasher := sha256.New()
+	
+	hasher.Write(cs.state.LastBlockID.Hash)
+
+	roundBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(roundBytes, uint32(cs.Round))
+	hasher.Write(roundBytes)
+
+	hashBytes := hasher.Sum(nil)
+	
+	fmt.Println("DEBUG: after hash: ", "hashBytes", hashBytes)
+	// Trailing 4 bytes
+	num := binary.LittleEndian.Uint32(hashBytes[len(hashBytes)-4:])
+	// TODO make reliable computation of the number of nodes in the network
+	numOfNodes := len(cs.Validators.Validators)
+	fmt.Println("DEBUG: trailing number: ", "num", num, "proposer", num%uint32(numOfNodes))
+}
+
 
 func (cs * ConsensusState) ImTheProposer() bool {
 	address := cs.privValidator.GetPubKey().Address()

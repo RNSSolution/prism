@@ -197,12 +197,12 @@ func testPrismFiles(cmd *cobra.Command, args []string) error {
 	for _, node := range nodes {
 		config.SetRoot(node.nodeDir)
 
-		config.LogLevel = "*:error"
+		config.LogLevel = "consensus:debug,*:info"
 
 		config.Consensus.UseLeagues = true
 		config.Consensus.League = node.league
 		config.Consensus.NodeId = node.nodeId
-		config.Consensus.CreateEmptyBlocksInterval = 5 * time.Second
+		config.Consensus.CreateEmptyBlocksInterval = 0 * time.Second
 
 		config.P2P.AddrBookStrict = false
 		config.P2P.AllowDuplicateIP = true

@@ -664,6 +664,7 @@ type ConsensusConfig struct {
 	UseLeagues     bool         `mapstructure:"use_leagues"`
 	League         int          `mapstructure:"league"`
 	NodeId         int          `mapstructure:"node_id"`
+	NumOfNodes     uint         `mapstructure:"num_of_nodes"`
 
 	RootDir string `mapstructure:"home"`
 	WalPath string `mapstructure:"wal_file"`
