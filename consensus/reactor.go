@@ -17,7 +17,7 @@ import (
 	sm "github.com/ColorPlatform/prism/state"
 	"github.com/ColorPlatform/prism/types"
 	"github.com/ColorPlatform/prism/globals"
-	global_logger "github.com/ColorPlatform/prism/globals/logger"
+	_ "github.com/ColorPlatform/prism/globals/logger"
 	tmtime "github.com/ColorPlatform/prism/types/time"
 )
 
@@ -35,6 +35,11 @@ const (
 
 //-----------------------------------------------------------------------------
 
+type commandChannels struct {
+	dataCmdChannel p2p.PeerCommandChannel	
+	voteCmdChannel p2p.PeerCommandChannel
+}
+
 // ConsensusReactor defines a reactor for the consensus service.
 type ConsensusReactor struct {
 	p2p.BaseReactor // BaseService + p2p.Switch
@@ -47,7 +52,7 @@ type ConsensusReactor struct {
 
 	metrics *Metrics
 
-	peerCommandChannels []p2p.PeerCommandChannel
+	cmdChannels []commandChannels
 }
 
 type ReactorOption func(*ConsensusReactor)
@@ -99,8 +104,8 @@ func (conR *ConsensusReactor) OnStop() {
 		conR.conS.Wait()
 	}
 	// close and forget all command channels
-	for ; len (conR.peerCommandChannels) > 0; {
-		conR.forgetCommandChannel(nil, conR.peerCommandChannels[0])
+	for ; len (conR.cmdChannels) > 0; {
+		conR.forgetCommandChannel(nil, conR.cmdChannels[0])
 	}
 }
 
@@ -166,7 +171,9 @@ func (conR *ConsensusReactor) GetChannels() []*p2p.ChannelDescriptor {
 
 // AddPeer implements Reactor
 func (conR *ConsensusReactor) AddPeer(peer p2p.Peer) {
+	conR.Logger.Debug("AddPeer: invoked", "peer", peer)
 	if !conR.IsRunning() {
+		conR.Logger.Debug("AddPeer: stopped, peer is not running", "peer", peer)
 		return
 	}
 
@@ -174,23 +181,28 @@ func (conR *ConsensusReactor) AddPeer(peer p2p.Peer) {
 	peerState := NewPeerState(peer).SetLogger(conR.Logger)
 	peer.Set(types.PeerStateKey, peerState)
 
-	peerCommandChannel := make(p2p.PeerCommandChannel, msgQueueSize)
-	peer.Set(types.PeerCommandChannelKey, peerCommandChannel)
+	peerCommandChannels := commandChannels{
+	 make(p2p.PeerCommandChannel, msgQueueSize),
+	 make(p2p.PeerCommandChannel, msgQueueSize),
+	}
+	peer.Set(types.PeerCommandChannelKey, peerCommandChannels)
 
 	// Begin routines for this peer.
-	go conR.gossipDataRoutine(peer, peerState)
+	go conR.gossipDataRoutine(peer, peerState, peerCommandChannels.dataCmdChannel)
 	// Votes gossip only whithin the league
 	// if peer.NodeInfo().League() == globals.League() 
 	{
-		global_logger.Logger().Debug("Launching gossip voting routines", "module", "consensus")
-		go conR.gossipVotesRoutine(peer, peerState, peerCommandChannel)
-		conR.registerCommandChannel(peer, peerCommandChannel)
+		conR.Logger.Debug("Launching gossip voting routines", "peer", peer)
+		go conR.gossipVotesRoutine(peer, peerState, peerCommandChannels.voteCmdChannel)
 		go conR.queryMaj23Routine(peer, peerState)
 	}
+	conR.registerCommandChannel(peer, peerCommandChannels)
+
 
 	// Send our state to peer.
 	// If we're fast_syncing, broadcast a RoundStepMessage later upon SwitchToConsensus().
 	if !conR.FastSync() {
+		conR.Logger.Debug("AddPeer: Sending new round step message", "peer", peer)
 		conR.sendNewRoundStepMessage(peer)
 	}
 }
@@ -200,9 +212,10 @@ func (conR *ConsensusReactor) RemovePeer(peer p2p.Peer, reason interface{}) {
 	if !conR.IsRunning() {
 		return
 	}
-	peerCommandChannel := peer.Get(types.PeerCommandChannelKey).(p2p.PeerCommandChannel)
-	conR.forgetCommandChannel(peer, peerCommandChannel)
-	close(peerCommandChannel)
+	peerCommandChannels := peer.Get(types.PeerCommandChannelKey).(commandChannels)
+	conR.forgetCommandChannel(peer, peerCommandChannels)
+	close(peerCommandChannels.dataCmdChannel)
+	close(peerCommandChannels.voteCmdChannel)
 	// TODO
 	// ps, ok := peer.Get(PeerStateKey).(*PeerState)
 	// if !ok {
@@ -365,30 +378,30 @@ func (conR *ConsensusReactor) FastSync() bool {
 
 //--------------------------------------
 
-func (conR * ConsensusReactor) registerCommandChannel(peer p2p.Peer, ch p2p.PeerCommandChannel) {
+func (conR * ConsensusReactor) registerCommandChannel(peer p2p.Peer, ch commandChannels) {
 	conR.mtx.RLock()
 	defer conR.mtx.RUnlock()
-	conR.peerCommandChannels = append(conR.peerCommandChannels, ch)
+	conR.cmdChannels = append(conR.cmdChannels, ch)
 }
 
-func (conR * ConsensusReactor) forgetCommandChannel(peer p2p.Peer, ch p2p.PeerCommandChannel) {
+func (conR * ConsensusReactor) forgetCommandChannel(peer p2p.Peer, ch commandChannels) {
 	var pos int
 	found := false
 
 	conR.mtx.RLock()
 	defer conR.mtx.RUnlock()
-	for i,ch_ := range(conR.peerCommandChannels) {
-		if ch_ == ch {
+	for i,ch_ := range(conR.cmdChannels) {
+		if ch_.voteCmdChannel == ch.voteCmdChannel {
 			found = true
 			pos = i
 			break
 		}
 	}
 	if found {
-		if pos == len(conR.peerCommandChannels) {
-			conR.peerCommandChannels = conR.peerCommandChannels[:pos]
+		if pos == len(conR.cmdChannels) {
+			conR.cmdChannels = conR.cmdChannels[:pos]
 		} else {
-			conR.peerCommandChannels = append(conR.peerCommandChannels[:pos], conR.peerCommandChannels[pos+1:]...)
+			conR.cmdChannels = append(conR.cmdChannels[:pos], conR.cmdChannels[pos+1:]...)
 		}
 	}
 	
@@ -490,20 +503,28 @@ func (conR *ConsensusReactor) commandRoutine() {
 		cmd, ok := <-conR.conS.changeNotifyQueue
 		if !ok {
 			logger.Debug("commandRoutine finished")
+			// TODO Close all command channels?
 			return
 		}
 		logger.Debug("commandRoutine received command", "command", cmd)
+
+		conR.mtx.RLock()
+		defer conR.mtx.RUnlock()
+
 		if cmd == p2p.HasNewVote || cmd == p2p.HasNewPrecommit {
-			conR.mtx.RLock()
-			defer conR.mtx.RUnlock()
-			for _,ch := range(conR.peerCommandChannels) {
-				ch <- cmd
+			for _,ch := range(conR.cmdChannels) {
+				ch.voteCmdChannel <- cmd
+			}
+		}
+		if cmd == p2p.HasNewBlockHeader || cmd == p2p.HasNewBlockPart {
+			for _,ch := range(conR.cmdChannels) {
+				ch.dataCmdChannel <- cmd
 			}
 		}
 	}
 }
 
-func (conR *ConsensusReactor) gossipDataRoutine(peer p2p.Peer, ps *PeerState) {
+func (conR *ConsensusReactor) gossipDataRoutine(peer p2p.Peer, ps *PeerState, cmdChan p2p.PeerCommandChannel) {
 	logger := conR.Logger.With("peer", peer)
 	logger.Debug("Started gossipDataRoutine")
 OUTER_LOOP:
@@ -544,7 +565,8 @@ OUTER_LOOP:
 				)
 			}
 			// Gossip block to peers 
-			if sendToPeer {
+			// if sendToPeer {
+			if ok {
 				part := rs.ProposalBlockParts.GetPart(index)
 				msg := &BlockPartMessage{
 					Height: rs.Height, // This tells peer that this part applies to us.
@@ -618,7 +640,17 @@ OUTER_LOOP:
 		}
 
 		// Nothing to do. Sleep.
-		time.Sleep(conR.conS.config.PeerGossipSleepDuration)
+		// time.Sleep(conR.conS.config.PeerGossipSleepDuration)
+		select {
+		case cmd, ok := <- cmdChan:
+			if !ok {
+				logger.Debug("gossipDataRoutine: command channel closed")
+				return
+			} 
+			logger.Debug("gossipDataRoutine: received command", "command", cmd)
+		case <- time.After(conR.conS.config.PeerGossipSleepDuration):
+			// Timeout
+		}
 		continue OUTER_LOOP
 	}
 }
@@ -626,6 +658,7 @@ OUTER_LOOP:
 func (conR *ConsensusReactor) gossipDataForCatchup(logger log.Logger, rs *cstypes.RoundState,
 	prs *cstypes.PeerRoundState, ps *PeerState, peer p2p.Peer) {
 
+	logger.Debug("gossipDataForCatchup", "rs_Height", rs.Height, "rs_Round", rs.Round, "ps_Height", prs.Height, "ps_Round", prs.Round)
 	if index, ok := prs.ProposalBlockParts.Not().PickRandom(); ok {
 		// Ensure that the peer's PartSetHeader is correct
 		blockMeta := conR.conS.blockStore.LoadBlockMeta(prs.Height)
@@ -662,7 +695,7 @@ func (conR *ConsensusReactor) gossipDataForCatchup(logger log.Logger, rs *cstype
 		}
 		return
 	}
-	//logger.Info("No parts to send in catch-up, sleeping")
+	// logger.Info("No parts to send in catch-up, sleeping")
 	time.Sleep(conR.conS.config.PeerGossipSleepDuration)
 }
 
@@ -733,7 +766,7 @@ OUTER_LOOP:
 		}
 
 		// time.Sleep(conR.conS.config.PeerGossipSleepDuration)
-		/*
+		
 		select {
 		case cmd, ok := <- cmdChan:
 			if !ok {
@@ -744,13 +777,15 @@ OUTER_LOOP:
 		case <- time.After(conR.conS.config.PeerGossipSleepDuration):
 			// Timeout
 		}
-		*/
+		
+		/*
 		cmd, ok := <- cmdChan
 		if !ok {
 			logger.Debug("gossipVotesRoutine: command channel closed")
 			return
 		} 
 		logger.Debug("gossipVotesRoutine: received command", "command", cmd)
+		*/
 		continue OUTER_LOOP
 	}
 }

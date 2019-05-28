@@ -196,6 +196,9 @@ type Node struct {
 	txIndexer        txindex.TxIndexer
 	indexerService   *txindex.IndexerService
 	prometheusSrv    *http.Server
+
+    // initSyncFlag     bool                   // If true, the node needs to wait other nodes
+	// initBarrier      sync.WorkGroup         // Wait for peers to start
 }
 
 // NewNode returns a new, ready to go, Tendermint Node.
@@ -627,13 +630,26 @@ func (n *Node) OnStart() error {
 	if err != nil {
 		return err
 	}
+	n.Logger.Info("P2P switch started")
 
 	// Always connect to persistent peers
 	if n.config.P2P.PersistentPeers != "" {
-		err = n.sw.DialPeersAsync(n.addrBook, splitAndTrimEmpty(n.config.P2P.PersistentPeers, ",", " "), true)
+		n.Logger.Info("Dialing persistent peers", "peers", n.config.P2P.PersistentPeers)
+		persistentPeers := splitAndTrimEmpty(n.config.P2P.PersistentPeers, ",", " ")
+		err = n.sw.DialPeersAsync(n.addrBook, persistentPeers, true)
 		if err != nil {
 			return err
 		}
+		// TODO needs a better logic for initial sync
+		for {
+			if n.sw.Peers().Size() +1 == len(persistentPeers) {
+				n.Logger.Info("Dialing persistent peers: done", "peers", n.sw.Peers(), "dialing", n.sw.Dialing(), "reconnecting", n.sw.Reconnecting())
+				break
+			}
+			n.Logger.Info("Dialing persistent peers: waiting", "peers_num", n.sw.Peers().Size())
+			time.Sleep(200 * time.Millisecond)
+		}
+		n.Logger.Info("Dialing persistent peers: done")
 	}
 
 	return nil

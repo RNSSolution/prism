@@ -1,0 +1,113 @@
+#!/bin/bash
+
+ProgName=$(basename $0)
+  
+sub_help(){
+    echo "Usage: $ProgName <subcommand> [options]\n"
+    echo "Subcommands:"
+    echo "    reset   Do bar"
+    echo "    start   Run baz"
+    echo "    stop    Run baz"
+    echo ""
+    echo "For help with each subcommand run:"
+    echo "$ProgName <subcommand> -h|--help"
+    echo ""
+}
+
+DEFAULT_ADDRESS="192.165.0.100"
+DEFAULT_PORT=26656
+DEFAULT_SUBNET="192.165.0.0/24"
+
+ADDRESS=$DEFAULT_ADDRESS
+PORT=$DEFAULT_PORT
+SUBNET=$DEFAULT_SUBNET
+
+sub_init_help() {
+    echo "Usage: $ProgName [OPTIONS] init"
+    echo ""
+    echo "OPTIONS"    
+    echo "    -l|--leagues LEAGUES    Number of leagues"
+    echo "    -n|--nodes NODES        Number of nodes in each league"
+    echo "    -a|--address ADDRESS    Starting IP address of nodes, defaults to $DEFAULT_ADDRESS"
+    echo "    -p|--port PORT          Starting port for port forwarding, defaults to $DEFAULT_PORT"
+    echo "    -s|--subnet             Subnetwork for docker VMs, defaults to $DEFAULT_SUBNET"
+    echo ""
+}
+
+sub_init() {
+    echo "Running 'init' command"
+    [ -z "$LEAGUES" ] && { echo "Missing number of leagues" >&2; sub_init_help >&2; exit 1; }
+    [ -z "$NODES" ] && { echo "Missing number of nodes" >&2; sub_init_help >&2; exit 1; }
+    [ -z "$ADDRESS" ] && { echo "Missing starting address" >&2; sub_init_help >&2; exit 1; }
+    [ -z "$PORT" ] && { echo "Missing starting port" >&2; sub_init_help >&2; exit 1; }
+    [ -z "$SUBNET" ] && { echo "Missing subnet" >&2; sub_init_help >&2; exit 1; }
+
+    python3 "$PWD/networks/local/generate-docker-compose-yml.py" ${LEAGUES} ${NODES} ${SUBNET} ${ADDRESS} ${PORT} > "$PWD/docker-compose.yml"
+    
+    docker run --rm -v "$PWD/build:/prism:Z" prism/localnode clean
+    docker run --rm -v "${PWD}/build:/prism:Z" prism/localnode testnet --l ${LEAGUES} --v ${NODES} \
+            --o . --populate-persistent-peers \
+            --starting-ip-address ${ADDRESS} ;
+}
+
+sub_reset(){
+    echo "Running 'reset' command."
+
+    docker-compose down
+    docker run --rm -v "$PWD/build:/prism:Z" prism/localnode clean
+}
+  
+sub_start(){
+    echo "Running 'start' command."
+    docker-compose up
+}
+
+sub_stop(){
+    echo "Running 'stop' command."
+    docker-compose down
+}
+
+if [ $# -eq 0 ]; then
+    echo "No arguments provided"
+    sub_help
+    exit 1
+fi
+
+while [ $# -gt 0 ]; do
+    arg="$1"
+    shift
+
+    case "$arg" in
+        "" | "-h" | "--help" | "help" )
+            sub_help
+            exit 0
+            ;;
+        "-l" | "--leagues") 
+            LEAGUES=$1
+            shift
+            ;;
+        "-n" | "--nodes")
+            NODES=$1
+            shift
+            ;;
+        "-a" | "--address" )
+            ADDRESS=$1
+            ;;
+        "-p" | "--port" )
+            PORT=$1
+            ;;
+        "-s" | "--subnet")
+            SUBNET=$1
+            ;;
+        *)
+            sub_${arg} $@
+            if [ $? = 127 ]; then
+                echo "Error: '$arg' is not a known subcommand." >&2
+                echo "       Run '$ProgName --help' for a list of known subcommands." >&2
+                exit 1
+            else
+                exit 0
+            fi
+            ;;
+    esac
+done

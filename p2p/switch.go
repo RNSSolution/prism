@@ -303,6 +303,14 @@ func (sw *Switch) Peers() IPeerSet {
 	return sw.peers
 }
 
+func (sw *Switch) Dialing() *cmn.CMap {
+	return sw.dialing
+}
+
+func (sw *Switch) Reconnecting() *cmn.CMap {
+	return sw.reconnecting
+}
+
 // StopPeerForError disconnects from a peer due to external error.
 // If the peer is persistent, it will attempt to reconnect.
 // TODO: make record depending on reason.

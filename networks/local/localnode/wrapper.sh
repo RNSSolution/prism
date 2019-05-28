@@ -12,7 +12,7 @@ fi
 ##
 BINARY=/prism/${BINARY:-prism}
 ID=${ID:-0}
-LOG=prism.log
+LOG=$(printf "prism-%02d.log" ${ID})
 
 [ -f "/prism/docker-run-before.sh" ] && source /prism/docker-run-before.sh
 
@@ -36,7 +36,8 @@ export TMHOME="/prism/node${ID}"
 mkdir -p "${TMHOME}"
 
 umask 022
-"$BINARY" $COMMAND_ARGS "$@" $SUBCOMMAND_ARGS | tee "${TMHOME}/${LOG}"
+# Filter away debug lines from the screen
+"$BINARY" $COMMAND_ARGS "$@" $SUBCOMMAND_ARGS | tee "${TMHOME}/${LOG}" | awk '/^D/ {debug=1;next;} /^[I|E]/ {debug=0;} { if (!debug) {print;} }'
 
 chmod 777 -R /prism
 

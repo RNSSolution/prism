@@ -709,6 +709,7 @@ func (cs *ConsensusState) handleMsg(mi msgInfo) {
 		// will not cause transition.
 		// once proposal is set, we can receive block parts
 		err = cs.setProposal(msg.Proposal)
+		cs.notifyChange(msg)
 	case *BlockPartMessage:
 		// if the proposal is complete, we'll enterPrevote or tryFinalizeCommit
 		added, err = cs.addProposalBlockPart(msg, peerID)
@@ -720,6 +721,7 @@ func (cs *ConsensusState) handleMsg(mi msgInfo) {
 			cs.Logger.Debug("Received block part from wrong round", "height", cs.Height, "csRound", cs.Round, "blockRound", msg.Round)
 			err = nil
 		}
+		cs.notifyChange(msg)
 	case *VoteMessage:
 		// attempt to add the vote and dupeout the validator if its a duplicate signature
 		// if the vote gives us a 2/3-any or 2/3-one, we transition
@@ -800,12 +802,22 @@ func (cs *ConsensusState) handleTxsAvailable() {
 	cs.enterPropose(cs.Height, 0)
 }
 
-func (cs * ConsensusState) notifyChange(msg * VoteMessage) {
+func (cs * ConsensusState) notifyChange(msg ConsensusMessage) {
 	var cmd p2p.PeerCommand 
-	if msg.Vote.Type == types.PrevoteType {
-		cmd = p2p.HasNewVote
-	} else {
-		cmd = p2p.HasNewPrecommit
+
+	switch msg := msg.(type) {
+	case *ProposalMessage:
+		cmd = p2p.HasNewBlockHeader
+	case *BlockPartMessage:
+		cmd = p2p.HasNewBlockPart		
+	case *VoteMessage:
+		if msg.Vote.Type == types.PrevoteType {
+			cmd = p2p.HasNewVote
+		} else {
+			cmd = p2p.HasNewPrecommit
+		}
+	default:
+		panic("Unsupported message type")
 	}
 	select {
 	case cs.changeNotifyQueue <- cmd:
@@ -943,26 +955,45 @@ func (cs *ConsensusState) enterPropose(height int64, round int) {
 	}
 }
 
+func (cs * ConsensusState) hashNumberWithLastBlock(num uint32) uint32 {
+	hasher := sha256.New()
+
+	numBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(numBytes, num)
+	hasher.Write(numBytes)
+	hasher.Write(cs.state.LastBlockID.Hash)	
+	hashBytes := hasher.Sum(nil)
+
+	res := binary.LittleEndian.Uint32(hashBytes[len(hashBytes)-4:])
+	return res
+}
+
 func (cs * ConsensusState) computeProposer() {
 	fmt.Println("DEBUG: Last block data: ", "ID", cs.state.LastBlockID, "height", cs.state.LastBlockHeight)
 	fmt.Println("DEBUG: current data: ", "height", cs.Height, "round", cs.Round)
 
-	hasher := sha256.New()
-	
-	hasher.Write(cs.state.LastBlockID.Hash)
-
-	roundBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(roundBytes, uint32(cs.Round))
-	hasher.Write(roundBytes)
-
-	hashBytes := hasher.Sum(nil)
-	
-	fmt.Println("DEBUG: after hash: ", "hashBytes", hashBytes)
-	// Trailing 4 bytes
-	num := binary.LittleEndian.Uint32(hashBytes[len(hashBytes)-4:])
 	// TODO make reliable computation of the number of nodes in the network
-	numOfNodes := len(cs.Validators.Validators)
-	fmt.Println("DEBUG: trailing number: ", "num", num, "proposer", num%uint32(numOfNodes))
+	numOfNodes := uint32(len(cs.Validators.Validators))
+	proposerNum := cs.hashNumberWithLastBlock(uint32(cs.Round))%numOfNodes
+	proposer := cs.Validators.Validators[proposerNum]
+	fmt.Println("DEBUG: computing proposer: ", "round", cs.Round, "block hash", cs.state.LastBlockID.Hash, "validators", cs.Validators)
+	fmt.Println("DEBUG: computed proposer: ", "proposer", proposer)
+
+	// Compute league leaders
+	leagues := cs.Validators.GetNumberOfLeagues()
+	var leaders []*types.Validator
+	for l := 0; l < leagues; l++ {
+		num := cs.hashNumberWithLastBlock(uint32(l))
+		league := cs.Validators.GetLeague(l)
+		if league == nil {
+			panic(fmt.Sprintf("Empty league %d", l))
+		}
+		leaderPos := num % uint32(len(league))
+		leaders = append(leaders, league[leaderPos])
+	}
+	fmt.Println("DEBUG: computed leaders: ", "round", cs.Round, "leaders", leaders)
+	cs.Validators.SetProposer(proposer)
+	cs.Validators.SetLeaders(leaders)
 }
 
 
@@ -1527,7 +1558,7 @@ func (cs *ConsensusState) addProposalBlockPart(msg *BlockPartMessage, peerID p2p
 
 	// Blocks might be reused, so round mismatch is OK
 	if cs.Height != height {
-		cs.Logger.Debug("Received block part from wrong height", "height", height, "round", round)
+		cs.Logger.Debug("Received block part from wrong height", "height", height, "round", round, "cs_height", cs.Height, "cs_round", cs.Round, "peerID", peerID)
 		return false, nil
 	}
 
@@ -1542,6 +1573,7 @@ func (cs *ConsensusState) addProposalBlockPart(msg *BlockPartMessage, peerID p2p
 
 	added, err = cs.ProposalBlockParts.AddPart(part)
 	if err != nil {
+		cs.Logger.Debug("Failed to add part", "height", height, "round", round, "peer", peerID, "error", err)
 		return added, err
 	}
 	if added && cs.ProposalBlockParts.IsComplete() {
@@ -1552,10 +1584,11 @@ func (cs *ConsensusState) addProposalBlockPart(msg *BlockPartMessage, peerID p2p
 			int64(cs.state.ConsensusParams.Block.MaxBytes),
 		)
 		if err != nil {
+			cs.Logger.Debug("Failed to unmarshal block", "height", height, "round", round, "peer", peerID, "error", err)
 			return added, err
 		}
 		// NOTE: it's possible to receive complete proposal blocks for future rounds without having the proposal
-		cs.Logger.Info("Received complete proposal block", "height", cs.ProposalBlock.Height, "hash", cs.ProposalBlock.Hash())
+		cs.Logger.Info("Received complete proposal block", "height", cs.ProposalBlock.Height, "hash", cs.ProposalBlock.Hash(), "peerID", peerID)
 		cs.eventBus.PublishEventCompleteProposal(cs.CompleteProposalEvent())
 
 		// Update Valid* if we can.

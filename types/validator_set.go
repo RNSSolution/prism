@@ -180,7 +180,7 @@ func computeMaxMinPriorityDiff(vals *ValidatorSet) int64 {
 	}
 }
 
-func (vals *ValidatorSet) getNumberOfLeagues() int {
+func (vals *ValidatorSet) GetNumberOfLeagues() int {
 	var res int = -1
 	for _, val := range vals.Validators {
 		if val.League > res {
@@ -190,8 +190,37 @@ func (vals *ValidatorSet) getNumberOfLeagues() int {
 	return res+1
 }
 
+func (vals * ValidatorSet) GetLeague(l int) (league []*Validator) {
+	num := 0
+	for _,val := range(vals.Validators) {
+		if val.League == l {
+			num += 1
+		}
+	}
+	if num == 0 {
+		return nil
+	}
+	league = make([]*Validator, num)
+	pos := 0
+	for _,val := range(vals.Validators) {
+		if val.League == l {
+			league[pos] = val
+			pos += 1
+		}
+	}
+	return
+}
+
+func (vals * ValidatorSet) SetProposer(proposer * Validator) {
+	vals.Proposer = proposer
+}
+
+func (vals * ValidatorSet) SetLeaders(leaders []*Validator) {
+	vals.leaders = leaders
+}
+
 func (vals *ValidatorSet) computeLeagueLeaders() ([]*Validator) {
-	leagues := vals.getNumberOfLeagues()
+	leagues := vals.GetNumberOfLeagues()
 	leaders := make([]*Validator, leagues)
 	if leagues > 0 {
 		for _, val := range vals.Validators {
