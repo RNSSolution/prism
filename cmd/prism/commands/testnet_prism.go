@@ -87,6 +87,24 @@ var nodes []nodeInfo
 
 func testPrismFiles(cmd *cobra.Command, args []string) error {
 	config := cfg.DefaultConfig()
+/*
+	config.Consensus.TimeoutPropose =              7000 * time.Millisecond
+	config.Consensus.TimeoutProposeDelta =         500 * time.Millisecond
+	config.Consensus.TimeoutPrevote =              7000 * time.Millisecond
+	config.Consensus.TimeoutPrevoteDelta =         500 * time.Millisecond
+	config.Consensus.TimeoutPrecommit =            7000 * time.Millisecond
+	config.Consensus.TimeoutPrecommitDelta =       500 * time.Millisecond
+	config.Consensus.TimeoutCommit =               7000 * time.Millisecond
+	config.Consensus.SkipTimeoutCommit =           false
+*/	
+	config.Consensus.CreateEmptyBlocks =           true
+	config.Consensus.CreateEmptyBlocksInterval =   0 * time.Second
+	
+	config.Consensus.PeerGossipSleepDuration =     100 * time.Millisecond
+	config.Consensus.PeerQueryMaj23SleepDuration = 2000 * time.Millisecond
+
+	config.P2P.MaxNumOutboundPeers = nLeagues*nValidators + 5
+
 	genVals := make([]types.GenesisValidator, nValidators*nLeagues)
 	nodes = make([]nodeInfo, nValidators*nLeagues+nNonValidators)
 

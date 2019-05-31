@@ -6,6 +6,8 @@ var (
 	nodeId     int = -1 // types.InvalidNodeId
 	// TODO make a separate package for these constants
 	// avoid using types package to prevent circular loops in imports
+
+	StartTimestamp int64 = 0
 )
 
 func UseLeagues() bool {

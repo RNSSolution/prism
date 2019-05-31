@@ -10,16 +10,19 @@ parser = argparse.ArgumentParser(description='Extract duration of block consensu
 
 parser.add_argument('files', metavar='FILE', type=str, nargs='+',
                     help='Log files')
+parser.add_argument('-c','--commits', action='store_true', help="Count timestamps between state commits")
 
 args = parser.parse_args()
 print(args.files)
 
-record=re.compile("(.)\\[([0-9-]+\\|[0-9:.]+)\\] (.*[^ ])  +(.*)")
-start=re.compile("Received complete proposal block")
-end=re.compile("Finalizing commit of block")
+record = re.compile("(.)\\[([0-9-]+\\|[0-9:.]+)\\] (.*[^ ])  +(.*)")
+start = re.compile("Received complete proposal block")
+if args.commits:
+	print("Use committed state messages")
+	end = re.compile("Committed state")
+else:
+	end = re.compile("Finalizing commit of block")
 
-
-file="build/node0/prism.log"
 
 def process_log(file):
 	blockTime=None
@@ -31,14 +34,17 @@ def process_log(file):
 			m = record.match(line)
 			if m:
 				lvl,tstamp,msg,param = m.groups()
-				if start.match(msg):
-					blockTime=datetime.datetime.strptime(tstamp, "%Y-%m-%d|%H:%M:%S.%f")
-					continue
 				if end.match(msg):
 					commitTime = datetime.datetime.strptime(tstamp, "%Y-%m-%d|%H:%M:%S.%f")
 					if blockTime is not None:
 						delta = commitTime - blockTime
 						roundTimes.append(delta.total_seconds())
+					if args.commits:
+						blockTime = commitTime
+						continue
+				if start.match(msg):
+					blockTime=datetime.datetime.strptime(tstamp, "%Y-%m-%d|%H:%M:%S.%f")
+					continue
 		return roundTimes
 
 roundTimes = []

@@ -10,6 +10,7 @@ fi
 ##
 ## Input parameters
 ##
+echo "WRAPPER DEBUG: ID=${ID} LOG=${LOG} COMMAND_ARGS=${COMMAND_ARGS} SUBCOMMAND_ARGS=${SUBCOMMAND_ARGS}"
 BINARY=/prism/${BINARY:-prism}
 ID=${ID:-0}
 LOG=$(printf "prism-%02d.log" ${ID})
@@ -32,12 +33,12 @@ fi
 ##
 ## Run binary with all parameters
 ##
-export TMHOME="/prism/node${ID}"
-mkdir -p "${TMHOME}"
+export PRISM_HOME="/prism/node${ID}"
+mkdir -p "${PRISM_HOME}"
 
 umask 022
 # Filter away debug lines from the screen
-"$BINARY" $COMMAND_ARGS "$@" $SUBCOMMAND_ARGS | tee "${TMHOME}/${LOG}" | awk '/^D/ {debug=1;next;} /^[I|E]/ {debug=0;} { if (!debug) {print;} }'
+"$BINARY" $COMMAND_ARGS "$@" $SUBCOMMAND_ARGS | tee "${PRISM_HOME}/${LOG}" | awk '/^D/ {debug=1;next;} /^[I|E]/ {debug=0;} { if (!debug) {print;} }'
 
 chmod 777 -R /prism
 

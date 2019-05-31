@@ -182,8 +182,8 @@ func (conR *ConsensusReactor) AddPeer(peer p2p.Peer) {
 	peer.Set(types.PeerStateKey, peerState)
 
 	peerCommandChannels := commandChannels{
-	 make(p2p.PeerCommandChannel, msgQueueSize),
-	 make(p2p.PeerCommandChannel, msgQueueSize),
+	 make(p2p.PeerCommandChannel, 0),
+	 make(p2p.PeerCommandChannel, 0),
 	}
 	peer.Set(types.PeerCommandChannelKey, peerCommandChannels)
 
@@ -1145,7 +1145,7 @@ func (ps *PeerState) SetHasProposalBlockPart(height int64, round int, index int)
 func (ps *PeerState) PickSendVote(votes types.VoteSetReader) bool {
 	if vote, ok := ps.PickVoteToSend(votes); ok {
 		msg := &VoteMessage{vote}
-		ps.logger.Debug("Sending vote message", "ps", ps, "vote", vote)
+		ps.logger.Debug("Sending vote message", "peer", ps.peer, "vote", vote)
 		if ps.peer.Send(VoteChannel, cdc.MustMarshalBinaryBare(msg)) {
 			ps.SetHasVote(vote)
 			return true

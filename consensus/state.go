@@ -468,8 +468,23 @@ func (cs *ConsensusState) updateRoundStep(round int, step cstypes.RoundStepType)
 
 // enterNewRound(height, 0) at cs.StartTime.
 func (cs *ConsensusState) scheduleRound0(rs *cstypes.RoundState) {
-	//cs.Logger.Info("scheduleRound0", "now", tmtime.Now(), "startTime", cs.StartTime)
-	sleepDuration := rs.StartTime.Sub(tmtime.Now())
+	var sleepDuration time.Duration
+
+	if (globals.StartTimestamp > 0) {
+		startTime := time.Unix(globals.StartTimestamp, 0)
+		now := tmtime.Now()
+		cs.Logger.Debug("Start time is set explicitly", "startTime", startTime, "now", tmtime.Now())
+		sleepDuration = startTime.Sub(now)
+		if sleepDuration < 0 {
+			cs.Logger.Debug("Start time in the past")
+			sleepDuration = 0
+		} 
+	} else {
+		cs.Logger.Debug("Start time is set by timeout in config", "startTime", rs.StartTime, "now", tmtime.Now())
+		sleepDuration = rs.StartTime.Sub(tmtime.Now())			
+	}
+
+	cs.Logger.Info("scheduleRound0", "now", tmtime.Now(), "duration", sleepDuration)
 	cs.scheduleTimeout(sleepDuration, rs.Height, 0, cstypes.RoundStepNewHeight)
 }
 
@@ -862,7 +877,7 @@ func (cs *ConsensusState) enterNewRound(height int64, round int) {
 	// but we fire an event, so update the round step first
 	cs.updateRoundStep(round, cstypes.RoundStepNewRound)
 	cs.Validators = validators
-	cs.computeProposer()
+	// cs.computeProposer()
 
 	if round == 0 {
 		// We've already reset these upon new height,
@@ -1588,7 +1603,7 @@ func (cs *ConsensusState) addProposalBlockPart(msg *BlockPartMessage, peerID p2p
 			return added, err
 		}
 		// NOTE: it's possible to receive complete proposal blocks for future rounds without having the proposal
-		cs.Logger.Info("Received complete proposal block", "height", cs.ProposalBlock.Height, "hash", cs.ProposalBlock.Hash(), "peerID", peerID)
+		cs.Logger.Info("Received complete proposal block", "height", cs.ProposalBlock.Height, "parent", cs.ProposalBlock.LastBlockID.Hash, "hash", cs.ProposalBlock.Hash(), "peerID", peerID, "our_height", cs.Height, "our_round", cs.Round)
 		cs.eventBus.PublishEventCompleteProposal(cs.CompleteProposalEvent())
 
 		// Update Valid* if we can.

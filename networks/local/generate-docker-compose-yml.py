@@ -20,6 +20,8 @@ NODE_TEMPLATE="""  node{id}:
     environment:
       - ID={id}
       - LOG=prism.log
+      - COMMAND_ARGS
+      - SUBCOMMAND_ARGS
     volumes:
       - ./build:/prism:Z
     networks:
