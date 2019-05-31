@@ -48,7 +48,7 @@ func AddNodeFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("consensus.create_empty_blocks", config.Consensus.CreateEmptyBlocks, "Set this to false to only produce blocks when there are txs or when the AppHash changes")
 	cmd.Flags().Bool("consensus.use_leagues", config.Consensus.UseLeagues, "Set this to false to switch to Tendermint consensus")
 
-	cmd.Flags().Int64("consensus.start", globals.StartTimestamp, "Start time for Round 0 in seconds since epoch (use date '+%s'")
+	cmd.Flags().Int64VarP(&globals.StartTimestamp, "consensus.start", "", 0, "Start time for Round 0 in seconds since epoch (use date '+%s'")
 
 }
 
@@ -59,7 +59,10 @@ func NewRunNodeCmd(nodeProvider nm.NodeProvider) *cobra.Command {
 		Use:   "node",
 		Short: "Run the tendermint node",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("DEBUG: globals.StartTimestamp", globals.StartTimestamp, "now", time.Now().Unix())
+			logger.Debug("globals.StartTimestamp", globals.StartTimestamp, "now", time.Now().Unix(), "secondsLeft")
+			if globals.StartTimestamp > 0 {
+				logger.Debug("Waiting for consensus start", "seconds", globals.StartTimestamp - time.Now().Unix())
+			}
 
 			n, err := nodeProvider(config, logger)
 			if err != nil {

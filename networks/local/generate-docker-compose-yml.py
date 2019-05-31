@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import ipaddress
 import argparse
 import sys
@@ -8,11 +10,12 @@ parser.add_argument("nodes", type=int, help='number of nodes in each league')
 parser.add_argument("network", type=ipaddress.IPv4Network, help="local network that the nodes belong to.")
 parser.add_argument("ipaddr", type=ipaddress.IPv4Address, help="starting IP address of the nodes array")
 parser.add_argument("port", type=int, help="starting port for forwardint nodes' RPC ports")
+parser.add_argument("-t", "--tendermint", action='store_true', help="starting port for forwardint nodes' RPC ports")
 
 def print_version():
 	print("version: '3'")
 
-NODE_TEMPLATE="""  node{id}:
+PRISM_NODE_TEMPLATE="""  node{id}:
     container_name: prismnode{id}
     image: "prism/localnode"
     ports:
@@ -27,6 +30,22 @@ NODE_TEMPLATE="""  node{id}:
     networks:
       localnet:
         ipv4_address: {ipaddr}"""
+
+TM_NODE_TEMPLATE="""  node{id}:
+    container_name: node{id}
+    image: "tendermint/localnode"
+    ports:
+      - "{startport}-{endport}:26656-26657"
+    environment:
+      - ID={id}
+      - LOG=tendermint.log
+    volumes:
+      - ./build:/tendermint:Z
+    networks:
+      localnet:
+        ipv4_address: {ipaddr}"""
+
+NODE_TEMPLATE = None
 
 def print_node(i, ipaddr, port):
 	nodespec = NODE_TEMPLATE.format(id=i, startport=port, endport=port+1, ipaddr=ipaddr)
@@ -77,6 +96,12 @@ def run():
 	elif args.port+2*args.leagues*args.nodes > 65535:
 		print("Port is too big: all ports must fit in [0,65535] range.")
 		fail = True
+
+	global NODE_TEMPLATE
+	if args.tendermint:
+		NODE_TEMPLATE = TM_NODE_TEMPLATE
+	else:
+		NODE_TEMPLATE = PRISM_NODE_TEMPLATE
 
 	if fail:
 		sys.exit(1)

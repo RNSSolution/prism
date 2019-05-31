@@ -151,6 +151,7 @@ func NewConsensusState(
 	blockStore sm.BlockStore,
 	txNotifier txNotifier,
 	evpool evidencePool,
+	logger log.Logger,
 	options ...StateOption,
 ) *ConsensusState {
 	cs := &ConsensusState{
@@ -170,6 +171,7 @@ func NewConsensusState(
 		evsw:             tmevents.NewEventSwitch(),
 		metrics:          NopMetrics(),
 	}
+	cs.SetLogger(logger)
 	// set function defaults (may be overwritten before calling Start)
 	cs.decideProposal = cs.defaultDecideProposal
 	cs.doPrevote = cs.defaultDoPrevote
@@ -592,7 +594,7 @@ func (cs *ConsensusState) updateToState(state sm.State) {
 	cs.ValidRound = -1
 	cs.ValidBlock = nil
 	cs.ValidBlockParts = nil
-	fmt.Println("DEBUG: Creating HeightVoteSet", "ChainID", state.ChainID, "height", height, "validators", validators)
+	cs.Logger.Debug("Creating HeightVoteSet", "ChainID", state.ChainID, "height", height, "validators", validators)
 	cs.Votes = cstypes.NewHeightVoteSet(state.ChainID, height, validators)
 	cs.CommitRound = -1
 	cs.LastCommit = lastPrecommits
@@ -984,15 +986,15 @@ func (cs * ConsensusState) hashNumberWithLastBlock(num uint32) uint32 {
 }
 
 func (cs * ConsensusState) computeProposer() {
-	fmt.Println("DEBUG: Last block data: ", "ID", cs.state.LastBlockID, "height", cs.state.LastBlockHeight)
-	fmt.Println("DEBUG: current data: ", "height", cs.Height, "round", cs.Round)
+	cs.Logger.Debug("computeProposer: Last block data: ", "ID", cs.state.LastBlockID, "height", cs.state.LastBlockHeight)
+	cs.Logger.Debug("computeProposer: current data: ", "height", cs.Height, "round", cs.Round)
 
 	// TODO make reliable computation of the number of nodes in the network
 	numOfNodes := uint32(len(cs.Validators.Validators))
 	proposerNum := cs.hashNumberWithLastBlock(uint32(cs.Round))%numOfNodes
 	proposer := cs.Validators.Validators[proposerNum]
-	fmt.Println("DEBUG: computing proposer: ", "round", cs.Round, "block hash", cs.state.LastBlockID.Hash, "validators", cs.Validators)
-	fmt.Println("DEBUG: computed proposer: ", "proposer", proposer)
+	cs.Logger.Debug("computeProposer: computing proposer: ", "round", cs.Round, "block hash", cs.state.LastBlockID.Hash, "validators", cs.Validators)
+	cs.Logger.Debug("computeProposer: computed proposer: ", "proposer", proposer)
 
 	// Compute league leaders
 	leagues := cs.Validators.GetNumberOfLeagues()
@@ -1006,7 +1008,7 @@ func (cs * ConsensusState) computeProposer() {
 		leaderPos := num % uint32(len(league))
 		leaders = append(leaders, league[leaderPos])
 	}
-	fmt.Println("DEBUG: computed leaders: ", "round", cs.Round, "leaders", leaders)
+	cs.Logger.Debug("computeProposer: computed leaders: ", "round", cs.Round, "leaders", leaders)
 	cs.Validators.SetProposer(proposer)
 	cs.Validators.SetLeaders(leaders)
 }

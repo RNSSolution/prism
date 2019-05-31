@@ -33,12 +33,13 @@ fi
 ##
 ## Run binary with all parameters
 ##
-export PRISM_HOME="/prism/node${ID}"
-mkdir -p "${PRISM_HOME}"
+export TMHOME="/prism/node${ID}"
+mkdir -p "${TMHOME}"
 
 umask 022
 # Filter away debug lines from the screen
-"$BINARY" $COMMAND_ARGS "$@" $SUBCOMMAND_ARGS | tee "${PRISM_HOME}/${LOG}" | awk '/^D/ {debug=1;next;} /^[I|E]/ {debug=0;} { if (!debug) {print;} }'
+echo "$BINARY" $COMMAND_ARGS "$@" $SUBCOMMAND_ARGS | tee "${TMHOME}/${LOG}"
+"$BINARY" $COMMAND_ARGS "$@" $SUBCOMMAND_ARGS | tee -a "${TMHOME}/${LOG}" | awk '/^D/ {debug=1;next;} /^[I|E]/ {debug=0;} { if (!debug) {print;} }'
 
 chmod 777 -R /prism
 

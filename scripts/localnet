@@ -61,7 +61,7 @@ sub_start(){
     echo "Running 'start' command."
     now=$(date '+%s')
     start=$(( now + 20 ))
-    SUBCOMMAND_ARGS="--consensus.start=${start}" docker-compose up
+    SUBCOMMAND_ARGS="--consensus.start=${start} --log_level=main:info,state:info,*:error" docker-compose up
 }
 
 sub_stop(){

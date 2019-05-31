@@ -412,6 +412,7 @@ func NewNode(config *cfg.Config,
 		blockStore,
 		mempool,
 		evidencePool,
+		logger.With("module", "consensus"),
 		cs.StateMetrics(csMetrics),
 	)
 	consensusState.SetLogger(consensusLogger)
@@ -643,10 +644,10 @@ func (n *Node) OnStart() error {
 		// TODO needs a better logic for initial sync
 		for {
 			if n.sw.Peers().Size() +1 == len(persistentPeers) {
-				n.Logger.Info("Dialing persistent peers: done", "peers", n.sw.Peers(), "dialing", n.sw.Dialing(), "reconnecting", n.sw.Reconnecting())
+				n.Logger.Debug("Dialing persistent peers: done", "peers", n.sw.Peers(), "dialing", n.sw.Dialing(), "reconnecting", n.sw.Reconnecting())
 				break
 			}
-			n.Logger.Info("Dialing persistent peers: waiting", "peers_num", n.sw.Peers().Size())
+			n.Logger.Debug("Dialing persistent peers: waiting", "peers_num", n.sw.Peers().Size())
 			time.Sleep(200 * time.Millisecond)
 		}
 		n.Logger.Info("Dialing persistent peers: done")
