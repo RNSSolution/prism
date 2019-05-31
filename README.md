@@ -54,13 +54,33 @@ make get_vendor_deps
 make build
 ```
 
-### Run local network with 3 leagues each by 3 nodes
-```
-make build-docker-localnode
-make localnet-start-3x3
-```
+### Run local network
 
-### Stop the network
+#### Prerequisites
+Local network is based on [Docker](https://docs.docker.com/install/) infrastructure and [`docker-compose` tool](https://docs.docker.com/compose/install/).
+1. Make sure you installed the most recent versions of `docker` and `docker-compose`.
+1. Add your Linux user to the `docker` group
+    ```
+    sudo usermod -a -G docker $USER
+    ```
+1. Build docker image
+    ```
+    make build-docker-localnode
+    ```
+
+#### Run local network
+Let's consider running a local network with 9 nodes grouped in 3 leagues
+
+1. Generate configuration files
+    ```
+    ./scripts/localnet -l 3 -n 3 init
+    ```
+2. Run the local network
+    ```
+    ./scripts/localnet start
+    ```
+#### Stop the network
+To stop the local network gracefully use the following command:
 ```
-make localnet-stop
+./scripts/localnet stop
 ```
