@@ -512,6 +512,8 @@ func (c *MConnection) sendPacketMsg() bool {
 		c.Logger.Error("Failed to write PacketMsg", "err", err)
 		c.stopForError(err)
 		return true
+	} else {
+		//c.Logger.Debug("Sent to channel", "size", _n, "channel", leastChannel)
 	}
 	c.sendMonitor.Update(int(_n))
 	c.flushTimer.Set()

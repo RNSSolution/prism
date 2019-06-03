@@ -59,9 +59,13 @@ sub_reset(){
   
 sub_start(){
     echo "Running 'start' command."
+    if [[ !("$SUBCOMMAND_ARGS" =~ "--log_level") ]]; then
+        SUBCOMMAND_ARGS="$SUBCOMMAND_ARGS --log_level=consensus:debug,main:info,state:info,*:error"
+    fi
+
     now=$(date '+%s')
     start=$(( now + 20 ))
-    SUBCOMMAND_ARGS="--consensus.start=${start} --log_level=main:info,state:info,*:error" docker-compose up
+    SUBCOMMAND_ARGS="$SUBCOMMAND_ARGS --consensus.start=${start}" docker-compose up
 }
 
 sub_stop(){

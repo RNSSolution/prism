@@ -576,6 +576,7 @@ OUTER_LOOP:
 				logger.Debug("Sending block part", "height", prs.Height, "round", prs.Round)
 				if peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg)) {
 					ps.SetHasProposalBlockPart(prs.Height, prs.Round, index)
+					logger.Debug("Sent block part", "height", prs.Height, "round", prs.Round)
 				}
 				continue OUTER_LOOP
 			}
@@ -603,42 +604,45 @@ OUTER_LOOP:
 		// If height and round don't match, sleep.
 		if (rs.Height != prs.Height) || (rs.Round != prs.Round) {
 			//logger.Info("Peer Height|Round mismatch, sleeping", "peerHeight", prs.Height, "peerRound", prs.Round, "peer", peer)
-			time.Sleep(conR.conS.config.PeerGossipSleepDuration)
-			continue OUTER_LOOP
-		}
 
-		// By here, height and round match.
-		// Proposal block parts were already matched and sent if any were wanted.
-		// (These can match on hash so the round doesn't matter)
-		// Now consider sending other things, like the Proposal itself.
+			// Prism: do not sleep, go to the end of the loop and wait for command
+			// time.Sleep(conR.conS.config.PeerGossipSleepDuration)
+			// continue OUTER_LOOP
 
-		// Send Proposal && ProposalPOL BitArray?
-		if rs.Proposal != nil && !prs.Proposal {
-			// Proposal: share the proposal metadata with peer.
-			{
-				msg := &ProposalMessage{Proposal: rs.Proposal}
-				logger.Debug("Sending proposal", "height", prs.Height, "round", prs.Round)
-				if peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg)) {
-					// NOTE[ZM]: A peer might have received different proposal msg so this Proposal msg will be rejected!
-					ps.SetHasProposal(rs.Proposal)
+		} else {
+
+			// By here, height and round match.
+			// Proposal block parts were already matched and sent if any were wanted.
+			// (These can match on hash so the round doesn't matter)
+			// Now consider sending other things, like the Proposal itself.
+
+			// Send Proposal && ProposalPOL BitArray?
+			if rs.Proposal != nil && !prs.Proposal {
+				// Proposal: share the proposal metadata with peer.
+				{
+					msg := &ProposalMessage{Proposal: rs.Proposal}
+					logger.Debug("Sending proposal", "height", prs.Height, "round", prs.Round)
+					if peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg)) {
+						// NOTE[ZM]: A peer might have received different proposal msg so this Proposal msg will be rejected!
+						ps.SetHasProposal(rs.Proposal)
+					}
 				}
-			}
-			// ProposalPOL: lets peer know which POL votes we have so far.
-			// Peer must receive ProposalMessage first.
-			// rs.Proposal was validated, so rs.Proposal.POLRound <= rs.Round,
-			// so we definitely have rs.Votes.Prevotes(rs.Proposal.POLRound).
-			if 0 <= rs.Proposal.POLRound {
-				msg := &ProposalPOLMessage{
-					Height:           rs.Height,
-					ProposalPOLRound: rs.Proposal.POLRound,
-					ProposalPOL:      rs.Votes.Prevotes(rs.Proposal.POLRound).BitArray(),
+				// ProposalPOL: lets peer know which POL votes we have so far.
+				// Peer must receive ProposalMessage first.
+				// rs.Proposal was validated, so rs.Proposal.POLRound <= rs.Round,
+				// so we definitely have rs.Votes.Prevotes(rs.Proposal.POLRound).
+				if 0 <= rs.Proposal.POLRound {
+					msg := &ProposalPOLMessage{
+						Height:           rs.Height,
+						ProposalPOLRound: rs.Proposal.POLRound,
+						ProposalPOL:      rs.Votes.Prevotes(rs.Proposal.POLRound).BitArray(),
+					}
+					logger.Debug("Sending POL", "height", prs.Height, "round", prs.Round)
+					peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg))
 				}
-				logger.Debug("Sending POL", "height", prs.Height, "round", prs.Round)
-				peer.Send(DataChannel, cdc.MustMarshalBinaryBare(msg))
+				continue OUTER_LOOP
 			}
-			continue OUTER_LOOP
 		}
-
 		// Nothing to do. Sleep.
 		// time.Sleep(conR.conS.config.PeerGossipSleepDuration)
 		select {
